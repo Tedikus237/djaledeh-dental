@@ -4,7 +4,6 @@ import { homePath, useAuth } from "@/auth/AuthContext";
 import { ProtectedRoute } from "@/auth/ProtectedRoute";
 import { AppShell } from "@/components/layout/AppShell";
 import type { Role } from "@/types";
-import Bientot from "@/pages/Bientot";
 import Dossier from "@/pages/dossier/Dossier";
 import FichePatient from "@/pages/patients/Fiche";
 import ListePatients from "@/pages/patients/Liste";
@@ -20,6 +19,11 @@ import ListeFactures from "@/pages/factures/Liste";
 import DashboardDocteur from "@/pages/docteur/Dashboard";
 import DashboardSecretaire from "@/pages/secretaire/Dashboard";
 
+// 👇 IMPORTS POUR LES RENDEZ-VOUS ET WHATSAPP 👇
+import Calendrier from "@/pages/rendezvous/Calendrier";
+import NouveauRDV from "@/pages/rendezvous/Nouveau";
+import Rappels from "@/pages/rendezvous/Rappels";
+
 function Racine() {
   const { role, ready } = useAuth();
   if (!ready) return null;
@@ -29,6 +33,7 @@ function Racine() {
 const page = (allow: Role[], el: ReactNode) => (
   <ProtectedRoute allow={allow}><AppShell>{el}</AppShell></ProtectedRoute>
 );
+
 const TOUS: Role[] = ["secretaire", "docteur", "admin"];
 const GESTION: Role[] = ["secretaire", "admin"];
 
@@ -47,10 +52,17 @@ export default function App() {
       <Route path="/patients/corbeille" element={page(GESTION, <CorbeillePatients />)} />
       <Route path="/patients/:id" element={page(TOUS, <FichePatient />)} />
       <Route path="/patients/:id/dossier" element={page(TOUS, <Dossier />)} />
-      <Route path="/rendez-vous/*" element={page(TOUS, <Bientot titre="Rendez-vous" lot={3} />)} />
+      
+      {/* 👇 ROUTES RENDEZ-VOUS 👇 */}
+      <Route path="/rendez-vous" element={page(TOUS, <Calendrier />)} />
+      <Route path="/rendez-vous/nouveau" element={page(GESTION, <NouveauRDV />)} />
+
       <Route path="/factures" element={page(GESTION, <ListeFactures />)} />
       <Route path="/factures/:id" element={page(GESTION, <DetailFacture />)} />
-      <Route path="/whatsapp" element={page(GESTION, <Bientot titre="Rappels WhatsApp" lot={3} />)} />
+      
+      {/* 👇 ROUTE WHATSAPP 👇 */}
+      <Route path="/whatsapp" element={page(TOUS, <Rappels />)} />
+      
       <Route path="/" element={<Racine />} />
       <Route path="*" element={<Racine />} />
     </Routes>

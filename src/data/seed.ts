@@ -95,9 +95,11 @@ export async function seedIfEmpty() {
       histoireMaladie: "Douleur vive au froid et à la mastication, apparue il y a 7 jours.", antecedents: "Aucun antécédent notable.",
       exobuccal: { "Ouverture buccale": "Normale", ATM: "RAS", Adénopathie: "Absente", Autres: "" },
       endobuccal: { Tartre: "Modéré", Halitose: "Absente", Gencive: "Légèrement inflammatoire", Muqueuse: "Normale", Diastème: "", DDM: "" },
+      examen: {},
       examenMc: "", examensComplementaires: "Radio panoramique", commentaireExamens: "",
       diagnostic: "Carie profonde de la 36", cat: "Dévitalisation puis obturation",
       odontogramme: { "36": ["C", "DC"], "46": ["O"], "18": ["A"] },
+      soins: [],
       historique: [{ date: now, par: "Dr Deffo", resume: "Dossier créé" }], createdAt: now, updatedAt: now
     }]);
   }

@@ -22,7 +22,7 @@ const ENDO = ["Tartre", "Halitose", "Gencive", "Muqueuse", "Diastème", "DDM"];
 const vide = (patientId: string): DossierMedical => {
   const now = new Date().toISOString();
   return { id: "", patientId, dateConsultation: isoDay(), motif: "", histoireMaladie: "", antecedents: "", exobuccal: {}, endobuccal: {},
-    examenMc: "", examensComplementaires: "", commentaireExamens: "", diagnostic: "", cat: "", odontogramme: {}, historique: [], createdAt: now, updatedAt: now };
+    examen: {}, examenMc: "", examensComplementaires: "", commentaireExamens: "", diagnostic: "", cat: "", odontogramme: {}, soins: [], historique: [], createdAt: now, updatedAt: now };
 };
 
 export default function Dossier() {

@@ -2,12 +2,12 @@ import { useEffect, useState, type ReactNode } from "react";
 import { AuthContext } from "./auth-context";
 import { db, collections } from "@/data/db";
 import { seedIfEmpty } from "@/data/seed";
-import type { User } from "@/types";
+import type { Compte } from "@/types";
 
 const SESSION_KEY = "djaledeh:session";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<Compte | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -15,7 +15,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await seedIfEmpty();
       const savedId = localStorage.getItem(SESSION_KEY);
       if (savedId) {
-        const u = await db.get<User>(collections.users, savedId);
+        const u = await db.get<Compte>(collections.users, savedId);
         if (u) setUser(u);
       }
       setLoading(false);
@@ -23,12 +23,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   async function login(loginValue: string, motDePasse: string) {
-    const users = await db.list<User>(collections.users);
+    const users = await db.list<Compte>(collections.users);
     const found = users.find(
-      (u) => u.login.toLowerCase() === loginValue.trim().toLowerCase()
+      (u) => u.alias.includes(loginValue.trim().toLowerCase())
     );
     if (!found) return { ok: false, error: "Identifiant inconnu." };
-    if (found.motDePasse !== motDePasse) return { ok: false, error: "Mot de passe incorrect." };
+    if (found.password !== motDePasse) return { ok: false, error: "Mot de passe incorrect." };
     setUser(found);
     localStorage.setItem(SESSION_KEY, found.id);
     return { ok: true };

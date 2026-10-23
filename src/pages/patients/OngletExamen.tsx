@@ -176,7 +176,7 @@ function OdontogrammeGrille({
     const nouveauxCodes = aCeCode ? actuel.filter((c) => c !== code) : [...actuel, code];
     const autres = valeur.filter((d) => d.numero !== numero);
     const maj = nouveauxCodes.length ? [...autres, { numero, codes: nouveauxCodes }] : autres;
-    maj.sort((a, b) => a.numero - b.numero);
+    maj.sort((a, b) => Number(a.numero) - Number(b.numero));
     onChange(maj);
   }
 

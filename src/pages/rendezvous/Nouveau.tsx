@@ -1,169 +1,165 @@
-import { useEffect, useState, type FormEvent } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import { db, collections } from "@/data/db";
-
-import type { Patient, RendezVous, User, StatutRdv } from "@/types";
-import { Card } from "@/components/ui/Card";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { PageHeader, Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { Input, Select, Textarea } from "@/components/ui/Field";
+import { collection } from "@/data/db";
+import type { RendezVous, Patient, Compte } from "@/types";
 
-function isoLocalDateTime(date: string, heure: string): string {
-  if (!date) return "";
-  const [h, m] = (heure || "09:00").split(":");
-  const d = new Date(`${date}T${h.padStart(2, "0")}:${(m || "00").padStart(2, "0")}:00`);
-  return d.toISOString();
-}
+const rdvDb = collection<RendezVous>("rendezVous");
+const patientDb = collection<Patient>("patients");
+const compteDb = collection<Compte>("comptes");
 
-export default function NouveauRdv() {
+export default function NouveauRDV() {
   const navigate = useNavigate();
- 
-  const [params] = useSearchParams();
-  const patientIdPre = params.get("patient") ?? "";
-
+  const [loading, setLoading] = useState(false);
   const [patients, setPatients] = useState<Patient[]>([]);
-  const [praticiens, setPraticiens] = useState<User[]>([]);
-  const [enregistrement, setEnregistrement] = useState(false);
-  const [erreur, setErreur] = useState("");
+  const [docteurs, setDocteurs] = useState<Compte[]>([]);
 
-  const [form, setForm] = useState({
-    patientId: patientIdPre,
-    praticienId: "",
-    date: new Date().toISOString().slice(0, 10),
-    heure: "09:00",
-    motif: "",
-    statut: "a_confirmer" as StatutRdv,
+  // On utilise les noms exacts de ton interface RendezVous
+  const [formData, setFormData] = useState({
+    patientId: "",
+    docteurId: "",
+    dateRdv: "",
+    heureRdv: "",
+    motif: "Consultation",
+    dureeMinutes: 30,
   });
 
-    useEffect(() => {
-    (async () => {
-      const [ps, us] = await Promise.all([
-        db.list<Patient>(collections.patients),
-        db.list<User>(collections.users),
+  useEffect(() => {
+    const chargerOptions = async () => {
+      const [tousPatients, tousComptes] = await Promise.all([
+        patientDb.list(),
+        compteDb.list()
       ]);
-      ps.sort((a, b) => a.nom.localeCompare(b.nom));
-      setPatients(ps);
-      const docs = us.filter((u) => u.role === "docteur" || u.role === "admin");
-      setPraticiens(docs);
-      setForm((f) => (f.praticienId ? f : { ...f, praticienId: docs[0]?.id ?? "" }));
-    })();
+      setPatients(tousPatients.filter(p => !p.deletedAt));
+      setDocteurs(tousComptes.filter(c => c.role === "docteur" || c.role === "admin"));
+    };
+    chargerOptions();
   }, []);
 
-  function set<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
-    setForm((f) => ({ ...f, [key]: value }));
-  }
-
-  async function onSubmit(e: FormEvent) {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErreur("");
-    if (!form.patientId) return setErreur("Sélectionnez un patient.");
-    if (!form.praticienId) return setErreur("Sélectionnez un praticien.");
-    if (!form.date || !form.heure) return setErreur("Date et heure obligatoires.");
+    if (!formData.patientId || !formData.docteurId || !formData.dateRdv || !formData.heureRdv) {
+      alert("Veuillez remplir tous les champs obligatoires.");
+      return;
+    }
 
-    setEnregistrement(true);
+    setLoading(true);
     try {
-      const iso = isoLocalDateTime(form.date, form.heure);
-      await db.create<RendezVous>(collections.rdvs, {
-        patientId: form.patientId,
-        praticienId: form.praticienId,
-        date: iso,
-        motif: form.motif.trim(),
-        statut: form.statut,
+      await rdvDb.create({
+        ...formData,
+        statut: "planifie",
         createdAt: new Date().toISOString(),
       });
-      navigate("/");
-    } catch {
-      setErreur("Erreur lors de l'enregistrement.");
+      navigate("/rendez-vous");
+    } catch (error) {
+      console.error(error);
+      alert("Erreur lors de la création du rendez-vous.");
     } finally {
-      setEnregistrement(false);
+      setLoading(false);
     }
-  }
+  };
 
   return (
-    <form onSubmit={onSubmit} className="space-y-8 max-w-2xl">
-      <header>
-        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-faint">
-          Rendez-vous
-        </p>
-        <h1 className="mt-2 text-2xl font-semibold tracking-tight text-ink">
-          Nouveau rendez-vous
-        </h1>
-      </header>
-
-      <Card title="Informations" accent="accent">
-        <div className="grid gap-5">
-          <Select
-            label="Patient"
-            value={form.patientId}
-            onChange={(e) => set("patientId", e.target.value)}
-            required
-          >
-            <option value="">— Sélectionner —</option>
-            {patients.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.nom} {p.prenom} — {p.numeroDossier}
-              </option>
-            ))}
-          </Select>
-
-          <Select
-            label="Praticien"
-            value={form.praticienId}
-            onChange={(e) => set("praticienId", e.target.value)}
-            required
-          >
-            <option value="">— Sélectionner —</option>
-            {praticiens.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.nom}
-              </option>
-            ))}
-          </Select>
-
-          <div className="grid gap-5 md:grid-cols-2">
-            <Input
-              label="Date"
-              type="date"
-              value={form.date}
-              onChange={(e) => set("date", e.target.value)}
+    <>
+      <PageHeader eyebrow="Nouveau" title="Créer un rendez-vous" />
+      
+      <Card className="mt-6 max-w-2xl">
+        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Patient *</label>
+            <select 
               required
-            />
-            <Input
-              label="Heure"
-              type="time"
-              value={form.heure}
-              onChange={(e) => set("heure", e.target.value)}
+              className="w-full border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-1 focus:ring-black"
+              value={formData.patientId}
+              onChange={(e) => setFormData({...formData, patientId: e.target.value})}
+            >
+              <option value="">-- Choisir un patient --</option>
+              {patients.map(p => (
+                <option key={p.id} value={p.id}>{p.nom} {p.prenom} ({p.numeroDossier})</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Docteur *</label>
+            <select 
               required
+              className="w-full border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-1 focus:ring-black"
+              value={formData.docteurId}
+              onChange={(e) => setFormData({...formData, docteurId: e.target.value})}
+            >
+              <option value="">-- Choisir un docteur --</option>
+              {docteurs.map(d => (
+                <option key={d.id} value={d.id}>{d.nom}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Date *</label>
+              <input 
+                required
+                type="date" 
+                className="w-full border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-1 focus:ring-black"
+                value={formData.dateRdv}
+                onChange={(e) => setFormData({...formData, dateRdv: e.target.value})}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Heure *</label>
+              <input 
+                required
+                type="time" 
+                className="w-full border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-1 focus:ring-black"
+                value={formData.heureRdv}
+                onChange={(e) => setFormData({...formData, heureRdv: e.target.value})}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Motif</label>
+            <input 
+              type="text" 
+              className="w-full border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-1 focus:ring-black"
+              value={formData.motif}
+              onChange={(e) => setFormData({...formData, motif: e.target.value})}
+              placeholder="Ex: Détartrage, Consultation..."
             />
           </div>
 
-          <Select
-            label="Statut"
-            value={form.statut}
-            onChange={(e) => set("statut", e.target.value as StatutRdv)}
-          >
-            <option value="a_confirmer">À confirmer</option>
-            <option value="confirme">Confirmé</option>
-          </Select>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Durée (minutes)</label>
+            <input 
+              type="number" 
+              step="15"
+              min="15"
+              className="w-full border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-1 focus:ring-black"
+              value={formData.dureeMinutes}
+              onChange={(e) => setFormData({...formData, dureeMinutes: parseInt(e.target.value)})}
+            />
+          </div>
 
-          <Textarea
-            label="Motif"
-            value={form.motif}
-            onChange={(e) => set("motif", e.target.value)}
-            placeholder="Ex : Traitement carie 36"
-          />
-        </div>
+          <div className="pt-4 flex items-center gap-4 border-t border-gray-100">
+            <Button 
+              type="button" 
+              onClick={() => navigate("/rendez-vous")}
+            >
+              Annuler
+            </Button>
+            <Button 
+              type="submit" 
+              disabled={loading}
+            >
+              {loading ? "Enregistrement..." : "Enregistrer le RDV"}
+            </Button>
+          </div>
+
+        </form>
       </Card>
-
-      {erreur && <p className="text-sm text-danger">{erreur}</p>}
-
-      <div className="flex gap-3">
-        <Button type="submit" disabled={enregistrement}>
-          {enregistrement ? "Enregistrement..." : "Enregistrer le rendez-vous"}
-        </Button>
-        <Button type="button" variant="outline" onClick={() => navigate(-1)}>
-          Annuler
-        </Button>
-      </div>
-    </form>
+    </>
   );
 }

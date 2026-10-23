@@ -57,15 +57,15 @@ export function OngletIdentification({ patient, onSaved }: Props) {
         <Ligne label="Situation matrimoniale" value={form.situationMatrimoniale} />
         <Ligne label="Téléphone" value={form.telephone} />
         <Ligne label="Assurance" value={form.assurance} />
-        <Ligne label="Personne à prévenir" value={form.personneAPrevenir} />
-        <Ligne label="Téléphone à prévenir" value={form.telephonePersonneAPrevenir} />
+        <Ligne label="Personne à prévenir" value={form.personneAPrevenir ?? ""} />
+        <Ligne label="Téléphone à prévenir" value={form.telephonePersonneAPrevenir ?? ""} />
         <Ligne label="Nature de la consultation" value={form.natureConsultation} />
         {form.natureConsultation === "Assurance" && (
-          <Ligne label="Nom de l'assurance" value={form.nomAssurance} />
+          <Ligne label="Nom de l'assurance" value={form.nomAssurance ?? ""} />
         )}
-        <Ligne label="Motif de consultation" value={form.motifConsultation} />
-        <Ligne label="Histoire de la maladie" value={form.histoireMaladie} />
-        <Ligne label="Antécédents" value={form.antecedents} />
+        <Ligne label="Motif de consultation" value={form.motifConsultation ?? ""} />
+        <Ligne label="Histoire de la maladie" value={form.histoireMaladie ?? ""} />
+        <Ligne label="Antécédents" value={form.antecedents ?? ""} />
       </div>
     );
   }

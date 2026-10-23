@@ -1,30 +1,52 @@
-import type { HTMLAttributes, ReactNode } from "react";
-import { cn } from "@/lib/utils";
+import React from "react";
 
-export function Card({ className, ...p }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("rounded-2xl border border-line bg-white", className)} {...p} />;
+interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
+  title?: string;
+  accent?: string;
 }
 
-export function CardTitle({ eyebrow, title, children }: { eyebrow?: string; title: string; children?: ReactNode }) {
+export function Card({ title, accent, className, children, ...props }: CardProps) {
+  void accent;
   return (
-    <div className="flex items-end justify-between gap-3 border-b border-line px-5 py-4">
-      <div>
-        {eyebrow && <p className="eyebrow mb-1">{eyebrow}</p>}
-        <h2 className="text-[15px] font-semibold">{title}</h2>
-      </div>
+    <div className={`bg-white border border-gray-200 rounded-lg ${className || ""}`} {...props}>
+      {title && (
+        <div className="px-6 py-4 border-b border-gray-100">
+          <h3 className="text-lg font-medium text-gray-900">{title}</h3>
+        </div>
+      )}
       {children}
     </div>
   );
 }
 
-export function PageHeader({ eyebrow, title, children }: { eyebrow?: string; title: string; children?: ReactNode }) {
+// Accepte children, title, eyebrow
+export function CardTitle({ children, title, eyebrow, className }: { children?: React.ReactNode, title?: string, eyebrow?: string, className?: string }) {
   return (
-    <div className="mb-8 flex animate-rise flex-wrap items-end justify-between gap-4">
+    <div className={`mb-2 ${className || ""}`}>
+      {eyebrow && <p className="text-xs font-semibold text-blue-500 uppercase tracking-wider mb-1">{eyebrow}</p>}
+      <h3 className="text-lg font-medium text-gray-900">{title || children}</h3>
+    </div>
+  );
+}
+
+// Accepte children, eyebrow, actions
+interface PageHeaderProps {
+  eyebrow?: string;
+  title?: string;
+  subtitle?: string;
+  actions?: React.ReactNode;
+  children?: React.ReactNode;
+}
+
+export function PageHeader({ eyebrow, title, subtitle, actions, children }: PageHeaderProps) {
+  return (
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
       <div>
-        {eyebrow && <p className="eyebrow mb-2">{eyebrow}</p>}
-        <h1 className="text-[28px] font-bold leading-tight md:text-[34px]">{title}</h1>
+        {eyebrow && <p className="text-xs font-semibold text-blue-500 uppercase tracking-wider mb-1">{eyebrow}</p>}
+        {(title || children) && <h1 className="text-3xl font-bold text-gray-900">{title || children}</h1>}
+        {subtitle && <p className="text-sm text-gray-500 mt-1">{subtitle}</p>}
       </div>
-      <div className="flex gap-2">{children}</div>
+      {actions && <div>{actions}</div>}
     </div>
   );
 }

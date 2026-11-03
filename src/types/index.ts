@@ -2,7 +2,7 @@ export type Role = "admin" | "docteur" | "secretaire";
 
 export interface Compte {
   id: string; identifiant: string; alias: string[]; nom: string;
-  role: Role; password: string; actif: boolean; createdAt: string;
+  role: Role; password?: string; actif: boolean; createdAt: string;
 }
 
 export type NatureConsultation = "standard" | "express" | "assurance" | "Assurance" | string;
@@ -14,6 +14,7 @@ export interface Patient {
   profession: string; residence: string; situationMatrimoniale: SituationMatrimoniale;
   telephone: string; assurance: string; personneUrgence: string;
   personneAPrevenir?: string; telephonePersonneAPrevenir?: string;
+  docteurIds?: string[];
   natureConsultation: NatureConsultation; 
   assuranceNom?: string; nomAssurance?: string; 
   motifConsultation?: string; histoireMaladie?: string; antecedents?: string;
@@ -63,12 +64,13 @@ export interface DossierMedical {
   id: string; patientId: string; dateConsultation: string;
   motif: string; histoireMaladie: string; antecedents: string;
   exobuccal: Record<string, string>; endobuccal: Record<string, string>;
-  examen: Record<string, unknown>;
+  examen: Record<string, string>;
   examenMc: string; examensComplementaires: string; commentaireExamens: string;
-  diagnostic: unknown;
+  diagnostic: string;
   cat: string;
-  odontogramme: unknown;
+  odontogramme: Record<string, CodeDent[]>;
   soins: SoinLigne[];
+  docteurIds?: string[];
   historique: Modif[]; createdAt: string; updatedAt: string;
 }
 

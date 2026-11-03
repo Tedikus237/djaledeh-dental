@@ -1,3 +1,6 @@
+import { useNavigate } from "react-router-dom";
+import { IconPlus } from "@/components/icons";
+import { Button } from "@/components/ui/Button";
 import { Card, CardTitle, PageHeader } from "@/components/ui/Card";
 import { RdvList } from "@/components/RdvList";
 import { PageSkeleton } from "@/components/ui/Skeleton";
@@ -10,6 +13,7 @@ const ROLE = { admin: "Administrateur", docteur: "Docteur", secretaire: "Secrét
 
 export default function DashboardAdmin() {
   const d = useDonnees();
+  const nav = useNavigate();
   if (!d) return <PageSkeleton />;
 
   const today = isoDay();
@@ -20,7 +24,9 @@ export default function DashboardAdmin() {
 
   return (
     <>
-      <PageHeader eyebrow="Vue d'ensemble" title="Bonjour Dr Deffo" />
+      <PageHeader eyebrow="Vue d'ensemble" title="Bonjour Dr Deffo">
+        <Button onClick={() => nav("/patients/nouveau")}><IconPlus size={16} />Nouveau patient</Button>
+      </PageHeader>
       <StatGrid items={[
         { label: "Patients", value: d.patientsActifs.length },
         { label: "Rendez-vous du jour", value: duJour.length },

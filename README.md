@@ -1,75 +1,48 @@
-# React + TypeScript + Vite
+# DJALEDEH Dental Care
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Application de gestion du cabinet dentaire DJALEDEH à Garoua.
 
-Currently, two official plugins are available:
+## Lancer l'application en local
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+1. Installer une version récente de Node.js.
+2. À la racine du projet, ouvrir un terminal et lancer :
 
-## React Compiler
+   ```bash
+   npm install
+   npm run dev
+   ```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+3. Ouvrir dans le navigateur l'adresse affichée par Vite, généralement `http://localhost:5173`.
 
-## Expanding the ESLint configuration
+## Installer l'application pour la tester
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+Dans Chrome ou Edge, ouvrez l'application sur `http://localhost:5173`, puis utilisez le menu du navigateur (⋮) et choisissez **Installer DJALEDEH Dental Care**. Selon la version, l'option peut se trouver dans **Enregistrer et partager**. Le navigateur n'affiche pas nécessairement de fenêtre d'installation automatiquement. En ligne, l'installation nécessite une adresse HTTPS.
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## Tester les écrans
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+En mode local, l'application crée des données de démonstration dans le navigateur. Les comptes de test sont :
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+| Profil | Identifiant | Mot de passe |
+|---|---|---|
+| Administrateur | `drdeffo` | `Deffo2026` |
+| Secrétariat | `secretaire` | `Secret2026` |
+| Docteur | `drpaul` | `Paul2026` |
 
+Parcours conseillé :
+
+1. Ouvrir **Patients**, puis **Nouveau patient** ; enregistrer un patient de test.
+2. Ouvrir sa fiche et consulter son dossier médical.
+3. Créer un rendez-vous depuis **Rendez-vous**.
+4. Consulter **Factures** et les tableaux de bord.
+5. Se déconnecter et essayer les profils secrétaire et docteur pour comparer leurs accès.
+
+Les données locales sont propres à chaque navigateur. Ne saisissez pas de véritables données de patients dans cette version de démonstration. La connexion à Firebase n'est pas encore le stockage utilisé par les écrans métier.
+
+## Vérifications du code
+
+```bash
+npm run lint
+npm run build
 ```
 
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
-```
+Le projet ne dispose pas encore de suite de tests automatisés. La compilation TypeScript doit être corrigée si `npm run build` signale des erreurs avant de préparer un déploiement.

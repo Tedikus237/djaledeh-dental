@@ -60,10 +60,8 @@ export function OngletDiagnostic({ dossier, onSaved, lectureSeule }: Props) {
 
       <Card title="Diagnostic" accent="accent">
         <Textarea
-          value={form.diagnostic.diagnostic}
-          onChange={(e) =>
-            setForm((f) => ({ ...f, diagnostic: { ...f.diagnostic, diagnostic: e.target.value } }))
-          }
+          value={form.diagnostic}
+          onChange={(e) => setForm((f) => ({ ...f, diagnostic: e.target.value }))}
           disabled={lecture}
           placeholder="Diagnostic posé par le praticien"
         />
@@ -71,10 +69,8 @@ export function OngletDiagnostic({ dossier, onSaved, lectureSeule }: Props) {
 
       <Card title="C.A.T. (Conduite à tenir)" accent="accent">
         <Textarea
-          value={form.diagnostic.cat}
-          onChange={(e) =>
-            setForm((f) => ({ ...f, diagnostic: { ...f.diagnostic, cat: e.target.value } }))
-          }
+          value={form.cat}
+          onChange={(e) => setForm((f) => ({ ...f, cat: e.target.value }))}
           disabled={lecture}
           placeholder="Traitement prévu, actes à réaliser"
         />

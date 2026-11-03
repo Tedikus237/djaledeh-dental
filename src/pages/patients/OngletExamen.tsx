@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { db, collections } from "@/data/db";
-import type { CodeDent, DossierMedical, DentState } from "@/types";
+import type { CodeDent, DossierMedical } from "@/types";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input, Textarea } from "@/components/ui/Field";
@@ -159,14 +159,14 @@ function OdontogrammeGrille({
   onChange,
   lectureSeule,
 }: {
-  valeur: DentState[];
-  onChange: (v: DentState[]) => void;
+  valeur: Record<string, CodeDent[]>;
+  onChange: (v: Record<string, CodeDent[]>) => void;
   lectureSeule?: boolean;
 }) {
   const [ouverte, setOuverte] = useState<number | null>(null);
 
   function codesDe(numero: number): CodeDent[] {
-    return valeur.find((d) => d.numero === numero)?.codes ?? [];
+    return valeur[String(numero)] ?? [];
   }
 
   function toggle(numero: number, code: CodeDent) {
@@ -174,9 +174,9 @@ function OdontogrammeGrille({
     const actuel = codesDe(numero);
     const aCeCode = actuel.includes(code);
     const nouveauxCodes = aCeCode ? actuel.filter((c) => c !== code) : [...actuel, code];
-    const autres = valeur.filter((d) => d.numero !== numero);
-    const maj = nouveauxCodes.length ? [...autres, { numero, codes: nouveauxCodes }] : autres;
-    maj.sort((a, b) => Number(a.numero) - Number(b.numero));
+    const maj = { ...valeur };
+    if (nouveauxCodes.length) maj[String(numero)] = nouveauxCodes;
+    else delete maj[String(numero)];
     onChange(maj);
   }
 

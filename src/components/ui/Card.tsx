@@ -43,10 +43,10 @@ export function PageHeader({ eyebrow, title, subtitle, actions, children }: Page
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
       <div>
         {eyebrow && <p className="text-xs font-semibold text-blue-500 uppercase tracking-wider mb-1">{eyebrow}</p>}
-        {(title || children) && <h1 className="text-3xl font-bold text-gray-900">{title || children}</h1>}
+        {title && <h1 className="text-3xl font-bold text-gray-900">{title}</h1>}
         {subtitle && <p className="text-sm text-gray-500 mt-1">{subtitle}</p>}
       </div>
-      {actions && <div>{actions}</div>}
+      {(actions || children) && <div className="flex flex-wrap items-center gap-2">{actions}{children}</div>}
     </div>
   );
 }

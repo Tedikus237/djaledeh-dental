@@ -9,6 +9,7 @@ import { Status } from "@/components/ui/Status";
 import { patients } from "@/data/services";
 import { useDonnees } from "@/data/useDonnees";
 import { statutRdv, type Tone } from "@/lib/statuts";
+import { estAssure } from "@/lib/tarifs";
 import { cn, formatDateFr, formatFcfa } from "@/lib/utils";
 import type { StatutFacture } from "@/types";
 
@@ -57,7 +58,7 @@ export default function FichePatient() {
     ["Né(e) le", `${formatDateFr(p.dateNaissance)}${p.lieuNaissance ? " à " + p.lieuNaissance : ""}`],
     ["Âge", `${p.age} ans`], ["Téléphone", p.telephone], ["Résidence", p.residence || "—"],
     ["Profession", p.profession || "—"], ["Situation matrimoniale", p.situationMatrimoniale],
-    ["Assurance", p.natureConsultation === "assurance" ? p.assuranceNom || p.assurance || "Oui" : p.assurance || "Aucune"],
+    ["Assurance", estAssure(p.natureConsultation) ? p.assuranceNom || p.assurance || "Oui" : p.assurance || "Aucune"],
     ["Personne à prévenir", p.personneUrgence || "—"]
   ];
   const ONGLETS: [Onglet, string][] = [["dossier", "Dossier médical"], ["rdv", "Rendez-vous"], ["factures", "Factures"]];

@@ -30,7 +30,7 @@ export default function Catalogue() {
   return (
     <>
       <PageHeader eyebrow="Paramètres" title="Catalogue des actes" />
-      <p className="mb-4 max-w-2xl text-sm text-mute">Seuls les actes cochés sont proposés à la secrétaire. Le prix « assuré » suit la nomenclature (coefficient × lettre). Le prix « non assuré » est fixé ici ; à 0, le prix assuré est utilisé.</p>
+      <p className="mb-4 max-w-2xl text-sm text-mute">Seuls les actes cochés sont proposés à la secrétaire. Le prix « assuré » suit la nomenclature (coefficient × lettre). Saisissez ici le tarif propre aux patients non assurés. Tant qu’il vaut 0, l’acte ne peut pas être ajouté à leur facture.</p>
 
       <Card className="mb-6 animate-rise p-5">
         <p className="eyebrow mb-4">Ajouter un acte</p>
@@ -38,7 +38,7 @@ export default function Catalogue() {
           <Input label="Libellé" value={nv.libelle} onChange={(e) => setNv({ ...nv, libelle: e.target.value })} />
           <Select label="Lettre" value={nv.lettre} onChange={(e) => setNv({ ...nv, lettre: e.target.value as Lettre })}>{Object.entries(LETTRES).map(([k, v]) => <option key={k} value={k}>{k} · {v.label}</option>)}</Select>
           <Input label="Coefficient" type="number" min={0} value={nv.coefficient} onChange={(e) => setNv({ ...nv, coefficient: e.target.value })} />
-          <Input label="Prix non assuré" type="number" min={0} value={nv.prixNonAssure} onChange={(e) => setNv({ ...nv, prixNonAssure: e.target.value })} />
+          <Input label="Prix non assuré (FCFA)" type="number" min={0} value={nv.prixNonAssure} onChange={(e) => setNv({ ...nv, prixNonAssure: e.target.value })} />
           <Input label="Durée (min)" type="number" min={5} value={nv.dureeMinutes} onChange={(e) => setNv({ ...nv, dureeMinutes: e.target.value })} />
           <Button onClick={ajouter}>Ajouter</Button>
         </div>
@@ -54,7 +54,7 @@ export default function Catalogue() {
               <span className="col-span-2 text-sm font-medium md:col-span-1">{a.libelle}</span>
               <span className="num text-sm text-mute">{libelleCode(a)}</span>
               <span className="num text-right text-sm">{formatFcfa(prixAssure(a))}</span>
-              <input aria-label={`Prix non assuré ${a.libelle}`} type="number" min={0} defaultValue={a.prixNonAssure} onBlur={(e) => maj(a, { prixNonAssure: Number(e.target.value) || 0 })} className={cellule} />
+              <input aria-label={`Prix non assuré ${a.libelle}`} title={a.prixNonAssure > 0 ? "Tarif non assuré configuré" : "Tarif non assuré à définir avant facturation"} type="number" min={0} defaultValue={a.prixNonAssure} onBlur={(e) => maj(a, { prixNonAssure: Number(e.target.value) || 0 })} className={cellule} />
               <input aria-label={`Durée ${a.libelle}`} type="number" min={5} defaultValue={a.dureeMinutes} onBlur={(e) => maj(a, { dureeMinutes: Number(e.target.value) || 30 })} className={cellule} />
               <input aria-label={`Actif ${a.libelle}`} type="checkbox" checked={a.actif} onChange={(e) => maj(a, { actif: e.target.checked })} className="h-5 w-5 accent-[#0B1220]" />
             </li>

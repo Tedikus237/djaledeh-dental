@@ -4,14 +4,14 @@ import { Input, Select } from "@/components/ui/Field";
 import { uid } from "@/data/db";
 import { actes as actesSvc, comptes, entreprises as entSvc, factures, soins } from "@/data/services";
 import { isoDay } from "@/lib/dates";
-import { libelleCode, prixActe, repartition, statutDe } from "@/lib/tarifs";
+import { estAssure, libelleCode, prixActe, repartition, statutDe } from "@/lib/tarifs";
 import { formatFcfa } from "@/lib/utils";
 import type { Acte, Compte, Entreprise, LigneSoin, ModePaiement, Paiement, Patient } from "@/types";
 
 export const MODES: Record<ModePaiement, string> = { especes: "Espèces", mobile_money: "Mobile money", assurance: "Assurance", autre: "Autre" };
 
 export function SoinForm({ patient, onSaved }: { patient: Patient; onSaved: () => void }) {
-  const assure = patient.natureConsultation === "assurance";
+  const assure = estAssure(patient.natureConsultation);
   const [catalogue, setCatalogue] = useState<Acte[]>([]);
   const [ents, setEnts] = useState<Entreprise[]>([]);
   const [praticiens, setPraticiens] = useState<Compte[]>([]);
@@ -37,12 +37,18 @@ export function SoinForm({ patient, onSaved }: { patient: Patient; onSaved: () =
   }, []);
 
   const ent = ents.find((e) => e.id === entId);
+  const acteSelectionne = catalogue.find((a) => a.id === acteId);
   const total = lignes.reduce((s, l) => s + l.montant, 0);
   const { partPatient, netEntreprise } = repartition(total, assure && !!ent, ent?.partPatient ?? 0);
 
   function ajouter() {
     const a = catalogue.find((x) => x.id === acteId);
     if (!a) return;
+    if (!assure && a.prixNonAssure <= 0) {
+      setErr(`Le tarif non assuré de « ${a.libelle} » n'est pas renseigné. Configurez-le dans le catalogue des actes.`);
+      return;
+    }
+    setErr("");
     setLignes([...lignes, { acteId: a.id, code: libelleCode(a), libelle: a.libelle, qte: 1, montant: prixActe(a, assure) }]);
     setActeId("");
   }
@@ -87,11 +93,14 @@ export function SoinForm({ patient, onSaved }: { patient: Patient; onSaved: () =
         <div className="flex-1">
           <Select label="Acte" value={acteId} onChange={(e) => setActeId(e.target.value)}>
             <option value="">Choisir un acte du catalogue…</option>
-            {catalogue.map((a) => <option key={a.id} value={a.id}>{a.libelle} ({libelleCode(a)}) — {formatFcfa(prixActe(a, assure))}</option>)}
+            {catalogue.map((a) => <option key={a.id} value={a.id}>{a.libelle} ({libelleCode(a)}) — {assure || a.prixNonAssure > 0 ? formatFcfa(prixActe(a, assure)) : "tarif non assuré à définir"}</option>)}
           </Select>
         </div>
-        <Button type="button" variant="outline" onClick={ajouter} disabled={!acteId}>Ajouter</Button>
+        <Button type="button" variant="outline" onClick={ajouter} disabled={!acteId || (!assure && (acteSelectionne?.prixNonAssure ?? 0) <= 0)}>Ajouter</Button>
       </div>
+      {!assure && acteSelectionne && acteSelectionne.prixNonAssure <= 0 && (
+        <p className="mt-2 text-sm text-danger">Le prix non assuré de cet acte reste à configurer dans Administration → Catalogue des actes.</p>
+      )}
 
       {lignes.length > 0 && (
         <ul className="mt-4 divide-y divide-line rounded-xl border border-line">

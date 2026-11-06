@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "@/auth/AuthContext";
 import { useAcces } from "@/auth/useAcces";
-import { IconArrowRight, IconSave } from "@/components/icons";
+import { IconArrowRight, IconFile, IconSave } from "@/components/icons";
 import { Odontogramme } from "@/components/Odontogramme";
 import { SoinForm } from "@/components/SoinForm";
 import { Button } from "@/components/ui/Button";
@@ -11,6 +11,7 @@ import { Input, Textarea } from "@/components/ui/Field";
 import { PageSkeleton } from "@/components/ui/Skeleton";
 import { dossiers, patients, rdvs, soins } from "@/data/services";
 import { isoDay } from "@/lib/dates";
+import { partagerDossierPdf } from "@/lib/dossierPdf";
 import { cn, formatDateFr, formatFcfa } from "@/lib/utils";
 import type { DossierMedical, Patient, Soin } from "@/types";
 
@@ -37,6 +38,8 @@ export default function Dossier() {
   const [acces, setAcces] = useState(true);
   const [msg, setMsg] = useState("");
   const [saving, setSaving] = useState(false);
+  const [partageMsg, setPartageMsg] = useState("");
+  const [sharing, setSharing] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -54,10 +57,25 @@ export default function Dossier() {
   if (!acces) return <Card className="p-10 text-center text-sm text-mute">Ce patient n'a pas de rendez-vous avec vous : accès non autorisé.</Card>;
   if (!f) return <PageSkeleton />;
 
+  const patient = p;
+  const dossier = f;
   const maj = (patch: Partial<DossierMedical>) => setF({ ...f, ...patch });
   const idx = ONGLETS.findIndex((o) => o[0] === onglet);
   const lecture = !peutEditer;
   const recharger = async () => setListe((await soins.list()).filter((x) => x.patientId === id).sort((a, b) => b.dateSoin.localeCompare(a.dateSoin)));
+
+  async function partager() {
+    setPartageMsg("");
+    setSharing(true);
+    try {
+      const resultat = await partagerDossierPdf(patient, dossier, liste);
+      setPartageMsg(resultat === "partage" ? "Dossier partagé." : resultat === "annule" ? "Partage annulé." : "PDF téléchargé. Vous pouvez maintenant le transmettre au patient.");
+    } catch (error) {
+      setPartageMsg(error instanceof Error ? error.message : "Impossible de préparer le dossier médical.");
+    } finally {
+      setSharing(false);
+    }
+  }
 
   async function enregistrer() {
     if (!f || !user) return;
@@ -82,9 +100,13 @@ export default function Dossier() {
   return (
     <>
       <PageHeader eyebrow={`${p.numeroDossier} · Dossier médical`} title={`${p.prenom} ${p.nom}`}>
+        <Button variant="outline" onClick={partager} disabled={sharing}>
+          <IconFile size={16} />{sharing ? "Préparation du PDF…" : "Partager le dossier"}
+        </Button>
         <Button variant="outline" onClick={() => nav(`/patients/${id}`)}>Retour à la fiche</Button>
       </PageHeader>
 
+      {partageMsg && <p role="status" className="mb-4 text-sm text-mute">{partageMsg}</p>}
       {lecture && <p className="mb-4 rounded-xl bg-canvas px-4 py-3 text-sm text-mute">Consultation seule : ce profil ne peut pas modifier le dossier.</p>}
 
       <div className="mb-4 flex gap-1 overflow-x-auto border-b border-line" role="tablist">

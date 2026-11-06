@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input, Textarea, Select } from "@/components/ui/Field";
 import { calculerAge } from "@/lib/utils";
+import { estAssure } from "@/lib/tarifs";
 
 interface Props {
   patient: Patient;
@@ -121,14 +122,14 @@ export function OngletIdentification({ patient, onSaved }: Props) {
         <div className="grid gap-5 md:grid-cols-2">
           <Select
             label="Nature de la consultation"
-            value={form.natureConsultation}
+            value={estAssure(form.natureConsultation) ? "assurance" : form.natureConsultation.toLowerCase()}
             onChange={(e) => set("natureConsultation", e.target.value as NatureConsultation)}
           >
-            <option value="Standard">Standard</option>
-            <option value="Express">Express</option>
-            <option value="Assurance">Assurance</option>
+            <option value="standard">Standard</option>
+            <option value="express">Express</option>
+            <option value="assurance">Assurance</option>
           </Select>
-          {form.natureConsultation === "Assurance" && (
+          {estAssure(form.natureConsultation) && (
             <Input label="Nom de l'assurance" value={form.nomAssurance} onChange={(e) => set("nomAssurance", e.target.value)} />
           )}
         </div>

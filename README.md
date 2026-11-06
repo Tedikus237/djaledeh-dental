@@ -31,12 +31,14 @@ En mode local, l'application crée des données de démonstration dans le naviga
 Parcours conseillé :
 
 1. Ouvrir **Patients**, puis **Nouveau patient** ; enregistrer un patient de test.
-2. Ouvrir sa fiche et consulter son dossier médical.
+2. Ouvrir son dossier médical et utiliser **Partager le dossier** pour produire un PDF privé (sur iPhone, le menu de partage peut proposer WhatsApp). Le PDF comprend les informations médicales et l’odontogramme, mais pas les factures.
 3. Créer un rendez-vous depuis **Rendez-vous**.
 4. Consulter **Factures** et les tableaux de bord.
 5. Se déconnecter et essayer les profils secrétaire et docteur pour comparer leurs accès.
 
-Les données locales sont propres à chaque navigateur. Ne saisissez pas de véritables données de patients dans cette version de démonstration. La connexion à Firebase n'est pas encore le stockage utilisé par les écrans métier.
+Les données locales sont propres à chaque navigateur. Ne saisissez pas de véritables données de patients dans cette version de démonstration. La connexion à Firebase n'est pas encore le stockage utilisé par les écrans métier. Le partage du PDF transmet des données médicales : vérifiez le destinataire avant de l’envoyer. L’application contient un odontogramme, mais ne permet pas encore de joindre des radiographies ou photos réelles.
+
+Pour les patients non assurés, les tarifs doivent être renseignés dans **Administration → Catalogue des actes**. Un acte dont le tarif non assuré est à zéro est signalé et ne peut pas être ajouté à une facture non assurée.
 
 ## Vérifications du code
 

@@ -13,6 +13,7 @@ export const LETTRES: Record<Lettre, { label: string; valeur: number }> = {
 };
 
 export const prixAssure = (a: Acte) => a.coefficient * LETTRES[a.lettre].valeur;
+export const estAssure = (nature: string | null | undefined) => nature?.trim().toLowerCase() === "assurance";
 export const prixActe = (a: Acte, assure: boolean) => (assure ? prixAssure(a) : a.prixNonAssure > 0 ? a.prixNonAssure : prixAssure(a));
 export const libelleCode = (a: Acte) => (a.lettre === "F" ? "Prix fixe" : `${a.lettre}${a.coefficient}`);
 

@@ -37,7 +37,7 @@ const NAV: Record<Role, NavItem[]> = {
 const LABEL: Record<Role, string> = { secretaire: "secrétaire", docteur: "docteur", admin: "administrateur" };
 
 export function AppShell({ children }: { children: ReactNode }) {
-  const { user, role, viewAs, logout, startViewAs, stopViewAs } = useAuth();
+  const { user, role, viewAs, logout, connectionError, startViewAs, stopViewAs } = useAuth();
   const nav = useNavigate();
   const [open, setOpen] = useState(false);
   if (!user || !role) return null;
@@ -98,7 +98,10 @@ export function AppShell({ children }: { children: ReactNode }) {
             <button onClick={logout} aria-label="Se déconnecter" className="grid h-11 w-11 place-items-center rounded-xl text-mute transition-colors hover:bg-canvas hover:text-ink md:h-10 md:w-10"><IconLogout size={18} /></button>
           </div>
         </header>
-        <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 md:px-8 md:py-10">{children}</main>
+        <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 md:px-8 md:py-10">
+          {connectionError && <p role="alert" className="mb-5 rounded-xl bg-red-50 p-3 text-sm text-danger">{connectionError}</p>}
+          {children}
+        </main>
       </div>
     </div>
   );

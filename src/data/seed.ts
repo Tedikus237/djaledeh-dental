@@ -4,6 +4,7 @@ import { calculerAge } from "@/lib/utils";
 import type { Acte, Facture, Lettre, LigneSoin, NatureConsultation, Paiement, RappelWhatsapp, RendezVous, Soin, StatutRdv } from "@/types";
 import { uid } from "./db";
 import { actes, comptes, dossiers, entreprises, factures, patients, rappels, rdvs, soins } from "./services";
+import { isFirebaseBackend } from "./firebase";
 
 const DAY_KEY = "djaledeh:seedDay";
 const DATA_KEY = "djaledeh:dataV";
@@ -21,6 +22,8 @@ const ACTES: [string, Lettre, number, number][] = [
 ];
 
 export async function seedIfEmpty() {
+  if (isFirebaseBackend()) return;
+
   const now = new Date().toISOString();
 
   if (!(await comptes.list()).length) {

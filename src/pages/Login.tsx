@@ -6,11 +6,12 @@ import { Logo } from "@/components/Logo";
 import { ToothHero } from "@/components/ToothHero";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Field";
+import { isFirebaseBackend } from "@/data/firebase";
 
 interface Errs { identifiant?: string; password?: string; form?: string }
 
 export default function Login() {
-  const { login, role, ready } = useAuth();
+  const { login, role, ready, connectionError } = useAuth();
   const nav = useNavigate();
   const [identifiant, setIdentifiant] = useState("");
   const [password, setPassword] = useState("");
@@ -55,12 +56,24 @@ export default function Login() {
           <Logo className="mb-10 md:hidden" />
           <p className="eyebrow mb-2">Connexion</p>
           <h1 className="text-[28px] font-bold">Accédez à votre espace</h1>
-          <p className="mt-2 text-sm text-mute">Saisissez l'identifiant de votre poste et votre mot de passe.</p>
+          <p className="mt-2 text-sm text-mute">
+            {isFirebaseBackend()
+              ? "Saisissez l'adresse e-mail de votre compte et votre mot de passe."
+              : "Saisissez l'identifiant de votre poste et votre mot de passe."}
+          </p>
           <form onSubmit={submit} className="mt-8 space-y-4" noValidate>
-            <Input label="Identifiant" placeholder="secrétaire" autoComplete="username" autoCapitalize="none" value={identifiant} onChange={(e) => setIdentifiant(e.target.value)} error={errs.identifiant} />
+            <Input
+              label={isFirebaseBackend() ? "Adresse e-mail" : "Identifiant"}
+              placeholder={isFirebaseBackend() ? "nom@exemple.com" : "secrétaire"}
+              autoComplete="username"
+              autoCapitalize="none"
+              value={identifiant}
+              onChange={(e) => setIdentifiant(e.target.value)}
+              error={errs.identifiant}
+            />
             <Input label="Mot de passe" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} error={errs.password} />
-            {errs.form && (
-              <div className="flex items-start gap-2 rounded-xl bg-red-50 p-3 text-sm text-danger"><IconAlert size={16} className="mt-0.5 shrink-0" />{errs.form}</div>
+            {(errs.form || connectionError) && (
+              <div className="flex items-start gap-2 rounded-xl bg-red-50 p-3 text-sm text-danger"><IconAlert size={16} className="mt-0.5 shrink-0" />{errs.form ?? connectionError}</div>
             )}
             <Button type="submit" className="w-full" loading={loading}>Se connecter</Button>
           </form>

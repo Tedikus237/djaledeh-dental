@@ -1,0 +1,45 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function activeStaff() {
+      return request.auth != null
+        && get(/databases/$(database)/documents/comptes/$(request.auth.uid)).data.actif == true;
+    }
+
+    match /comptes/{accountId} {
+      allow get: if request.auth != null && request.auth.uid == accountId;
+      allow list: if activeStaff();
+      allow create, update, delete: if activeStaff()
+        && get(/databases/$(database)/documents/comptes/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    match /patients/{document=**} {
+      allow read, write: if activeStaff();
+    }
+    match /rendezVous/{document=**} {
+      allow read, write: if activeStaff();
+    }
+    match /rdvs/{document=**} {
+      allow read, write: if activeStaff();
+    }
+    match /dossiers/{document=**} {
+      allow read, write: if activeStaff();
+    }
+    match /factures/{document=**} {
+      allow read, write: if activeStaff();
+    }
+    match /actes/{document=**} {
+      allow read, write: if activeStaff();
+    }
+    match /entreprises/{document=**} {
+      allow read, write: if activeStaff();
+    }
+    match /soins/{document=**} {
+      allow read, write: if activeStaff();
+    }
+    match /rappels/{document=**} {
+      allow read, write: if activeStaff();
+    }
+  }
+}

@@ -36,7 +36,15 @@ Parcours conseillé :
 4. Consulter **Factures** et les tableaux de bord.
 5. Se déconnecter et essayer les profils secrétaire et docteur pour comparer leurs accès.
 
-Les données locales sont propres à chaque navigateur. Ne saisissez pas de véritables données de patients dans cette version de démonstration. La connexion à Firebase n'est pas encore le stockage utilisé par les écrans métier. Le partage du PDF transmet des données médicales : vérifiez le destinataire avant de l’envoyer. L’application contient un odontogramme, mais ne permet pas encore de joindre des radiographies ou photos réelles.
+Les données locales sont propres à chaque navigateur. Ne saisissez pas de véritables données de patients dans cette version de démonstration. Le partage du PDF transmet des données médicales : vérifiez le destinataire avant de l’envoyer. L’application contient un odontogramme, mais ne permet pas encore de joindre des radiographies ou photos réelles.
+
+## Stockage partagé Firebase
+
+La version de production utilise Firebase via `.env.production`. Le mode local reste activé pendant le développement avec `.env.example`/`.env.local`. La configuration Web Firebase est publique par conception et ne contient aucune clé d'administration. Les données locales de démonstration ne sont jamais copiées automatiquement dans Firestore.
+
+Les membres se connectent avec l'adresse e-mail et le mot de passe déjà créés dans Firebase Authentication. Pour chaque membre, créez un document `comptes/{UID Firebase}` dans Firestore avec `id` (texte, identique à l'UID), `identifiant` (texte), `alias` (liste de textes en minuscules), `nom` (texte), `role` (`admin`, `docteur` ou `secretaire`), `actif` (`true`) et `createdAt` (texte ISO). N'ajoutez jamais le mot de passe au document. Pour la démonstration actuelle, associez le compte de la secrétaire au rôle `secretaire`, celui du docteur au rôle `docteur`, et celui de Deffo au rôle `admin`. Les règles publiées dans `firestore.rules` refusent l'accès aux utilisateurs non authentifiés et aux comptes inactifs. Les données locales ne sont jamais migrées automatiquement.
+
+N'utilisez que des données fictives pour les démonstrations. Avant tout dossier patient réel, faites vérifier la configuration de sécurité et les accès, et remplacez les mots de passe temporaires.
 
 Pour les patients non assurés, les tarifs doivent être renseignés dans **Administration → Catalogue des actes**. Un acte dont le tarif non assuré est à zéro est signalé et ne peut pas être ajouté à une facture non assurée.
 

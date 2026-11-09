@@ -1,6 +1,13 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { comptes } from "@/data/services";
 import { seedIfEmpty } from "@/data/seed";
+import {
+  connectFirebaseUser,
+  disconnectFirebaseUser,
+  isFirebaseBackend,
+  persistFirebaseSession,
+  watchFirebaseUser,
+} from "@/data/firebase";
 import type { Compte, Role } from "@/types";
 
 const SESSION = "djaledeh:session";
@@ -12,8 +19,9 @@ interface Ctx {
   viewAs: Role | null;
   readOnly: boolean;
   ready: boolean;
+  connectionError: string | null;
   login: (identifiant: string, password: string) => Promise<Compte>;
-  logout: () => void;
+  logout: () => Promise<void>;
   startViewAs: (r: Role) => void;
   stopViewAs: () => void;
 }
@@ -26,8 +34,51 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<Compte | null>(null);
   const [viewAs, setViewAs] = useState<Role | null>(null);
   const [ready, setReady] = useState(false);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (isFirebaseBackend()) {
+      let active = true;
+      const unsubscribe = watchFirebaseUser((firebaseUser) => {
+        if (!firebaseUser) {
+          if (active) {
+            setUser(null);
+            setReady(true);
+          }
+          return;
+        }
+
+        void comptes.get(firebaseUser.uid).then(async (account) => {
+          if (!active) return;
+          if (!account?.actif) {
+            await disconnectFirebaseUser();
+            setUser(null);
+            setConnectionError("Ce compte n'est pas activé dans le cabinet. Contactez l'administrateur.");
+          } else {
+            setUser(account);
+            setConnectionError(null);
+          }
+          setReady(true);
+        }).catch((error: unknown) => {
+          if (active) {
+            setUser(null);
+            setConnectionError(error instanceof Error ? error.message : "Impossible de charger le compte du cabinet.");
+            setReady(true);
+          }
+        });
+      }, (error) => {
+        if (active) {
+          setConnectionError(error.message);
+          setReady(true);
+        }
+      });
+
+      return () => {
+        active = false;
+        unsubscribe();
+      };
+    }
+
     (async () => {
       await seedIfEmpty();
       const id = localStorage.getItem(SESSION);
@@ -40,6 +91,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = useCallback(async (identifiant: string, password: string) => {
+    if (isFirebaseBackend()) {
+      await persistFirebaseSession();
+      const firebaseUser = await connectFirebaseUser(identifiant, password);
+      const account = await comptes.get(firebaseUser.user.uid);
+      if (!account?.actif) {
+        await disconnectFirebaseUser();
+        throw new Error("Ce compte n'est pas activé dans le cabinet. Contactez l'administrateur.");
+      }
+      setConnectionError(null);
+      setUser(account);
+      setViewAs(null);
+      return account;
+    }
+
     const key = norm(identifiant);
     const c = (await comptes.list()).find((x) => x.actif && x.alias.includes(key));
     if (!c || c.password !== password) throw new Error("Identifiant ou mot de passe incorrect.");
@@ -49,7 +114,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return c;
   }, []);
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    if (isFirebaseBackend()) {
+      try {
+        await disconnectFirebaseUser();
+      } catch (error) {
+        setConnectionError(error instanceof Error ? error.message : "La déconnexion Firebase a échoué.");
+        return;
+      }
+    }
     localStorage.removeItem(SESSION);
     setUser(null);
     setViewAs(null);
@@ -60,8 +133,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<Ctx>(() => ({
     user, role: user ? viewAs ?? user.role : null, viewAs, readOnly: viewAs !== null,
-    ready, login, logout, startViewAs, stopViewAs
-  }), [user, viewAs, ready, login, logout, startViewAs, stopViewAs]);
+    ready, connectionError, login, logout, startViewAs, stopViewAs
+  }), [user, viewAs, ready, connectionError, login, logout, startViewAs, stopViewAs]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

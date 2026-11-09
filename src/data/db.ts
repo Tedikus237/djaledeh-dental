@@ -1,4 +1,12 @@
 import type { Patient, RendezVous, DossierMedical, Facture, Acte, Entreprise, Compte } from "@/types";
+import {
+  firestoreCreate,
+  firestoreGet,
+  firestoreList,
+  firestoreRemove,
+  firestoreUpdate,
+  isFirebaseBackend,
+} from "./firebase";
 
 const PREFIX = "djaledeh:";
 
@@ -19,18 +27,38 @@ const collectionName = (collection: CollectionName) =>
 export function collection<T extends { id: string }>(name: string) {
   return {
     name,
-    async list(): Promise<T[]> { return read<T>(name); },
-    async get(id: string): Promise<T | null> { return read<T>(name).find((r) => r.id === id) ?? null; },
+    async list(): Promise<T[]> {
+      return isFirebaseBackend() ? firestoreList<T>(name) : read<T>(name);
+    },
+    async get(id: string): Promise<T | null> {
+      return isFirebaseBackend()
+        ? firestoreGet<T>(name, id)
+        : read<T>(name).find((r) => r.id === id) ?? null;
+    },
     async create(data: Omit<T, "id">): Promise<T> {
-      const row = { ...data, id: uid() } as unknown as T;
+      const id = uid();
+      if (isFirebaseBackend()) return firestoreCreate<T>(name, id, data);
+      const row = { ...data, id } as unknown as T;
       write(name, [...read<T>(name), row]);
       return row;
     },
     async update(id: string, patch: Partial<T>): Promise<void> {
+      if (isFirebaseBackend()) {
+        await firestoreUpdate<T>(name, id, patch);
+        return;
+      }
       write(name, read<T>(name).map((r) => (r.id === id ? { ...r, ...patch } : r)));
     },
-    async remove(id: string): Promise<void> { write(name, read<T>(name).filter((r) => r.id !== id)); },
-    async replaceAll(rows: T[]): Promise<void> { write(name, rows); }
+    async remove(id: string): Promise<void> {
+      if (isFirebaseBackend()) return firestoreRemove(name, id);
+      write(name, read<T>(name).filter((r) => r.id !== id));
+    },
+    async replaceAll(rows: T[]): Promise<void> {
+      if (isFirebaseBackend()) {
+        throw new Error("Le remplacement complet d'une collection est désactivé sur le stockage partagé.");
+      }
+      write(name, rows);
+    }
   };
 }
 
@@ -55,16 +83,22 @@ export const db = {
   users: comptesDb, 
   // Fonctions génériques "racines" pour les pages qui font db.get(...)
   get: async <T extends { id: string }>(coll: CollectionName, id: string): Promise<T | null> =>
-    read<T>(collectionName(coll)).find((row) => row.id === id) ?? null,
-  list: async <T>(coll: CollectionName): Promise<T[]> => read<T>(collectionName(coll)),
+    isFirebaseBackend()
+      ? firestoreGet<T>(collectionName(coll), id)
+      : read<T>(collectionName(coll)).find((row) => row.id === id) ?? null,
+  list: async <T extends { id: string }>(coll: CollectionName): Promise<T[]> =>
+    isFirebaseBackend() ? firestoreList<T>(collectionName(coll)) : read<T>(collectionName(coll)),
   create: async <T extends { id: string }>(coll: CollectionName, data: Omit<T, "id">): Promise<T> => {
     const name = collectionName(coll);
-    const row = { ...data, id: uid() } as T;
+    const id = uid();
+    if (isFirebaseBackend()) return firestoreCreate<T>(name, id, data);
+    const row = { ...data, id } as T;
     write(name, [...read<T>(name), row]);
     return row;
   },
   update: async <T extends { id: string }>(coll: CollectionName, id: string, patch: Partial<T>): Promise<T | null> => {
     const name = collectionName(coll);
+    if (isFirebaseBackend()) return firestoreUpdate<T>(name, id, patch);
     const rows = read<T>(name);
     const current = rows.find((row) => row.id === id);
     if (!current) return null;
@@ -74,6 +108,7 @@ export const db = {
   },
   remove: async (coll: CollectionName, id: string): Promise<void> => {
     const name = collectionName(coll);
+    if (isFirebaseBackend()) return firestoreRemove(name, id);
     write(name, read<{ id: string }>(name).filter((row) => row.id !== id));
   }
 };

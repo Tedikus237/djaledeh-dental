@@ -35,6 +35,51 @@ const config = {
 const requiredConfig = ["apiKey", "authDomain", "projectId", "appId"] as const;
 const hasFirebaseConfig = requiredConfig.every((key) => Boolean(config[key]));
 
+const READ_CACHE_TTL_MS = 15_000;
+type ReadCacheEntry = {
+  expiresAt: number;
+  hasValue: boolean;
+  value?: unknown;
+  pending?: Promise<unknown>;
+};
+const readCache = new Map<string, ReadCacheEntry>();
+
+async function cachedRead<T>(key: string, load: () => Promise<T>): Promise<T> {
+  const cached = readCache.get(key);
+  if (cached?.hasValue && cached.expiresAt > Date.now()) return cached.value as T;
+  if (cached?.pending) return cached.pending as Promise<T>;
+
+  const entry: ReadCacheEntry = { expiresAt: 0, hasValue: false };
+  entry.pending = load()
+    .then((value) => {
+      if (readCache.get(key) === entry) {
+        entry.value = value;
+        entry.hasValue = true;
+        entry.expiresAt = Date.now() + READ_CACHE_TTL_MS;
+        entry.pending = undefined;
+      }
+      return value;
+    })
+    .catch((error: unknown) => {
+      if (readCache.get(key) === entry) readCache.delete(key);
+      throw error;
+    });
+  readCache.set(key, entry);
+  return entry.pending as Promise<T>;
+}
+
+function invalidateReadCache(name: string) {
+  const listPrefix = `list:${name}:`;
+  const documentPrefix = `document:${name}:`;
+  for (const key of readCache.keys()) {
+    if (key.startsWith(listPrefix) || key.startsWith(documentPrefix)) readCache.delete(key);
+  }
+}
+
+export function clearFirebaseReadCache() {
+  readCache.clear();
+}
+
 export const isFirebaseBackend = () =>
   import.meta.env.VITE_DATA_BACKEND === "firebase";
 
@@ -71,16 +116,21 @@ export function usernameEmail(username: string) {
 export async function connectFirebaseUser(identity: string, password: string) {
   const value = identity.trim();
   const email = value.includes("@") ? value.toLowerCase() : usernameEmail(value);
+  clearFirebaseReadCache();
   return signInWithEmailAndPassword(getFirebaseAuth(), email, password);
 }
 
 export async function disconnectFirebaseUser() {
   await signOut(getFirebaseAuth());
+  clearFirebaseReadCache();
 }
 
 export function watchFirebaseUser(onChange: (user: FirebaseUser | null) => void, onError: (error: Error) => void) {
   try {
-    return onAuthStateChanged(getFirebaseAuth(), onChange, onError);
+    return onAuthStateChanged(getFirebaseAuth(), (user) => {
+      clearFirebaseReadCache();
+      onChange(user);
+    }, onError);
   } catch (error) {
     onError(error instanceof Error ? error : new Error("Impossible d'initialiser Firebase Authentication."));
     return () => undefined;
@@ -110,20 +160,28 @@ export function firestoreDocumentRef(name: string, id: string) {
 }
 
 export async function firestoreList<T extends { id: string }>(name: string, filters: DataFilter[] = []): Promise<T[]> {
-  const ref = firestoreCollectionRef(name);
-  const constraints = firestoreFilters(filters);
-  const snapshot = await getDocs(constraints.length ? query(ref, ...constraints) : ref);
-  return snapshot.docs.map((item) => ({ ...item.data(), id: item.id }) as T);
+  const filterKey = filters.map(({ field, operator, value }) => `${field}:${operator}:${value}`).join("|");
+  const rows = await cachedRead(`list:${name}:${filterKey}`, async () => {
+    const ref = firestoreCollectionRef(name);
+    const constraints = firestoreFilters(filters);
+    const snapshot = await getDocs(constraints.length ? query(ref, ...constraints) : ref);
+    return snapshot.docs.map((item) => ({ ...item.data(), id: item.id }) as T);
+  });
+  return rows.map((row) => ({ ...row }));
 }
 
 export async function firestoreGet<T extends { id: string }>(name: string, id: string): Promise<T | null> {
-  const snapshot = await getDoc(firestoreDocumentRef(name, id));
-  return snapshot.exists() ? ({ ...snapshot.data(), id: snapshot.id } as T) : null;
+  const value = await cachedRead(`document:${name}:${id}`, async () => {
+    const snapshot = await getDoc(firestoreDocumentRef(name, id));
+    return snapshot.exists() ? ({ ...snapshot.data(), id: snapshot.id } as T) : null;
+  });
+  return value ? { ...value } : null;
 }
 
 export async function firestoreCreate<T extends { id: string }>(name: string, id: string, data: Omit<T, "id">): Promise<T> {
   const row = { ...data, id } as T & DocumentData;
   await setDoc(firestoreDocumentRef(name, id), row);
+  invalidateReadCache(name);
   return row;
 }
 
@@ -132,13 +190,16 @@ export async function firestoreUpdate<T extends { id: string }>(name: string, id
   const current = await getDoc(ref);
   if (!current.exists()) return null;
   await updateDoc(ref, patch as DocumentData);
+  invalidateReadCache(name);
   return { ...current.data(), ...patch, id } as T;
 }
 
 export async function firestoreRemove(name: string, id: string) {
   await deleteDoc(firestoreDocumentRef(name, id));
+  invalidateReadCache(name);
 }
 
 export async function firestoreAddDoctorAccess(name: string, id: string, doctorId: string) {
   await updateDoc(firestoreDocumentRef(name, id), { docteurIds: arrayUnion(doctorId) });
+  invalidateReadCache(name);
 }

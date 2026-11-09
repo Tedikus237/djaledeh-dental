@@ -61,7 +61,11 @@ export default function FichePatient() {
     ["Assurance", estAssure(p.natureConsultation) ? p.assuranceNom || p.assurance || "Oui" : p.assurance || "Aucune"],
     ["Personne à prévenir", p.personneUrgence || "—"]
   ];
-  const ONGLETS: [Onglet, string][] = [["dossier", "Dossier médical"], ["rdv", "Rendez-vous"], ["factures", "Factures"]];
+  const ONGLETS: [Onglet, string][] = [
+    ["dossier", "Dossier médical"],
+    ["rdv", "Rendez-vous"],
+    ...(!docteurId ? [["factures", "Factures"] as [Onglet, string]] : []),
+  ];
 
   return (
     <>

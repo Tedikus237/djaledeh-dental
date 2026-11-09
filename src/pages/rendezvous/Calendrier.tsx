@@ -1,41 +1,52 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { useAuth } from "@/auth/AuthContext";
 import { PageHeader, Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { collection } from "@/data/db";
-import type { RendezVous, Patient, StatutRdv } from "@/types";
-
-const rdvDb = collection<RendezVous>("rendezVous");
-const patientDb = collection<Patient>("patients");
+import { patients, rdvs as anciennesVisites, rendezVous } from "@/data/services";
+import type { RendezVous, StatutRdv } from "@/types";
 
 export default function Calendrier() {
+  const { user } = useAuth();
   const [rdvs, setRdvs] = useState<(RendezVous & { patientNom?: string })[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     const chargerDonnees = async () => {
-      const [listeRdvs, listePatients] = await Promise.all([
-        rdvDb.list(),
-        patientDb.list()
-      ]);
+      try {
+        const filtreDocteur = user?.role === "docteur"
+          ? [{ field: "docteurId", operator: "==" as const, value: user.id }]
+          : [];
+        const filtrePatients = user?.role === "docteur"
+          ? [{ field: "docteurIds", operator: "array-contains" as const, value: user.id }]
+          : [];
+        const [anciens, nouveaux, listePatients] = await Promise.all([
+          anciennesVisites.list(filtreDocteur),
+          rendezVous.list(filtreDocteur),
+          patients.list(filtrePatients),
+        ]);
+        const listeRdvs = [...anciens, ...nouveaux];
 
-      const rdvsAvecNoms = listeRdvs.map(rdv => {
-        const patient = listePatients.find(p => p.id === rdv.patientId);
-        return { 
-          ...rdv, 
-          patientNom: patient ? `${patient.nom} ${patient.prenom}` : "Patient inconnu" 
-        };
-      });
+        const rdvsAvecNoms = listeRdvs.map(rdv => {
+          const patient = listePatients.find(p => p.id === rdv.patientId);
+          return {
+            ...rdv,
+            patientNom: patient ? `${patient.nom} ${patient.prenom}` : "Patient inconnu"
+          };
+        });
 
-      // Tri par date puis par heure
-      rdvsAvecNoms.sort((a, b) => `${a.dateRdv} ${a.heureRdv}`.localeCompare(`${b.dateRdv} ${b.heureRdv}`));
-      
-      setRdvs(rdvsAvecNoms);
-      setLoading(false);
+        rdvsAvecNoms.sort((a, b) => `${a.dateRdv} ${a.heureRdv}`.localeCompare(`${b.dateRdv} ${b.heureRdv}`));
+        setRdvs(rdvsAvecNoms);
+      } catch {
+        setError("Impossible de charger le planning. Vérifiez votre connexion ou vos autorisations.");
+      } finally {
+        setLoading(false);
+      }
     };
 
-    chargerDonnees();
-  }, []);
+    void chargerDonnees();
+  }, [user]);
 
   const getStatutBadge = (statut: StatutRdv) => {
     switch(statut) {
@@ -60,6 +71,8 @@ export default function Calendrier() {
       <Card className="overflow-hidden">
         {loading ? (
           <div className="p-8 text-center text-sm text-gray-500">Chargement du planning...</div>
+        ) : error ? (
+          <div role="alert" className="p-8 text-center text-sm text-danger">{error}</div>
         ) : rdvs.length === 0 ? (
           <div className="p-12 text-center flex flex-col items-center">
             <svg className="w-12 h-12 mb-4 text-gray-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">

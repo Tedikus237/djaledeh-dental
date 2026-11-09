@@ -21,6 +21,7 @@ import {
   setDoc,
   updateDoc,
   where,
+  writeBatch,
   type DocumentData,
   type QueryConstraint,
 } from "firebase/firestore";
@@ -182,6 +183,23 @@ export async function firestoreCreate<T extends { id: string }>(name: string, id
   const row = { ...data, id } as T & DocumentData;
   await setDoc(firestoreDocumentRef(name, id), row);
   invalidateReadCache(name);
+  return row;
+}
+
+export async function firestoreCreateAppointment<T extends { id: string; patientId: string; docteurId: string }>(
+  id: string,
+  data: Omit<T, "id">,
+): Promise<T> {
+  const db = getFirebaseDb();
+  const row = { ...data, id } as T & DocumentData;
+  const batch = writeBatch(db);
+  batch.set(doc(db, "rendezVous", id), row);
+  batch.update(doc(db, "patients", data.patientId), {
+    docteurIds: arrayUnion(data.docteurId),
+  });
+  await batch.commit();
+  invalidateReadCache("rendezVous");
+  invalidateReadCache("patients");
   return row;
 }
 

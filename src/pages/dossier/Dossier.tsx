@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { Card, CardTitle, PageHeader } from "@/components/ui/Card";
 import { Input, Textarea } from "@/components/ui/Field";
 import { PageSkeleton } from "@/components/ui/Skeleton";
-import { dossiers, patients, rdvs, soins } from "@/data/services";
+import { dossiers, patients, rdvs, rendezVous, soins } from "@/data/services";
 import { isoDay } from "@/lib/dates";
 import { partagerDossierPdf } from "@/lib/dossierPdf";
 import { cn, formatDateFr, formatFcfa } from "@/lib/utils";
@@ -36,6 +36,7 @@ export default function Dossier() {
   const [liste, setListe] = useState<Soin[]>([]);
   const [onglet, setOnglet] = useState<Onglet>("identification");
   const [acces, setAcces] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [msg, setMsg] = useState("");
   const [saving, setSaving] = useState(false);
   const [partageMsg, setPartageMsg] = useState("");
@@ -43,18 +44,40 @@ export default function Dossier() {
 
   useEffect(() => {
     (async () => {
-      const pat = await patients.get(id);
-      setP(pat);
-      if (!pat) return;
-      if (docteurId && !(await rdvs.list()).some((r) => r.patientId === id && r.docteurId === docteurId)) { setAcces(false); return; }
-      setF((await dossiers.list()).find((x) => x.patientId === id) ?? vide(id));
-      setListe((await soins.list()).filter((s) => s.patientId === id).sort((a, b) => b.dateSoin.localeCompare(a.dateSoin)));
+      try {
+        const pat = docteurId
+          ? (await patients.list([{ field: "docteurIds", operator: "array-contains", value: docteurId }])).find((x) => x.id === id) ?? null
+          : await patients.get(id);
+        if (!pat) {
+          setP(null);
+          if (docteurId) setAcces(false);
+          return;
+        }
+        setP(pat);
+        const filtreDocteur = docteurId ? [{ field: "docteurIds", operator: "array-contains" as const, value: docteurId }] : [];
+        const filtreSoins = [{ field: "patientId", operator: "==" as const, value: id }];
+        const [anciens, nouveaux, listeDossiers, listeSoins] = await Promise.all([
+          rdvs.list(docteurId ? [{ field: "docteurId", operator: "==", value: docteurId }] : []),
+          rendezVous.list(docteurId ? [{ field: "docteurId", operator: "==", value: docteurId }] : []),
+          dossiers.list(filtreDocteur),
+          soins.list(filtreSoins),
+        ]);
+        if (docteurId && ![...anciens, ...nouveaux].some((r) => r.patientId === id)) {
+          setAcces(false);
+          return;
+        }
+        setF(listeDossiers.find((x) => x.patientId === id) ?? vide(id));
+        setListe(listeSoins.sort((a, b) => b.dateSoin.localeCompare(a.dateSoin)));
+      } catch {
+        setLoadError("Impossible de charger le dossier. Vérifiez votre connexion ou vos autorisations.");
+      }
     })();
   }, [id, docteurId]);
 
+  if (loadError) return <Card role="alert" className="p-10 text-center text-sm text-danger">{loadError}</Card>;
   if (p === undefined) return <PageSkeleton />;
-  if (!p) return <Card className="p-10 text-center text-sm text-mute">Patient introuvable.</Card>;
   if (!acces) return <Card className="p-10 text-center text-sm text-mute">Ce patient n'a pas de rendez-vous avec vous : accès non autorisé.</Card>;
+  if (!p) return <Card className="p-10 text-center text-sm text-mute">Patient introuvable.</Card>;
   if (!f) return <PageSkeleton />;
 
   const patient = p;
@@ -62,7 +85,7 @@ export default function Dossier() {
   const maj = (patch: Partial<DossierMedical>) => setF({ ...f, ...patch });
   const idx = ONGLETS.findIndex((o) => o[0] === onglet);
   const lecture = !peutEditer;
-  const recharger = async () => setListe((await soins.list()).filter((x) => x.patientId === id).sort((a, b) => b.dateSoin.localeCompare(a.dateSoin)));
+  const recharger = async () => setListe((await soins.list([{ field: "patientId", operator: "==", value: id }])).sort((a, b) => b.dateSoin.localeCompare(a.dateSoin)));
 
   async function partager() {
     setPartageMsg("");
@@ -83,7 +106,7 @@ export default function Dossier() {
     const now = new Date().toISOString();
     const label = ONGLETS[idx][1];
     const historique = [...f.historique, { date: now, par: user.nom, resume: f.id ? `Modification, onglet « ${label} »` : "Dossier créé" }];
-    const base = { ...f, historique, updatedAt: now };
+    const base = { ...f, docteurIds: patient.docteurIds ?? [], historique, updatedAt: now };
     if (f.id) {
       await dossiers.update(f.id, base);
       setF(base);

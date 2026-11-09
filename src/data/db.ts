@@ -6,6 +6,7 @@ import {
   firestoreRemove,
   firestoreUpdate,
   isFirebaseBackend,
+  type DataFilter,
 } from "./firebase";
 
 const PREFIX = "djaledeh:";
@@ -27,8 +28,12 @@ const collectionName = (collection: CollectionName) =>
 export function collection<T extends { id: string }>(name: string) {
   return {
     name,
-    async list(): Promise<T[]> {
-      return isFirebaseBackend() ? firestoreList<T>(name) : read<T>(name);
+    async list(filters: DataFilter[] = []): Promise<T[]> {
+      if (isFirebaseBackend()) return firestoreList<T>(name, filters);
+      return read<T>(name).filter((row) => filters.every(({ field, operator, value }) => {
+        const fieldValue = (row as Record<string, unknown>)[field];
+        return operator === "==" ? fieldValue === value : Array.isArray(fieldValue) && fieldValue.includes(value);
+      }));
     },
     async get(id: string): Promise<T | null> {
       return isFirebaseBackend()

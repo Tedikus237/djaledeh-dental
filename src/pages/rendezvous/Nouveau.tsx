@@ -3,9 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { PageHeader, Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { collection } from "@/data/db";
-import type { RendezVous, Patient, Compte } from "@/types";
+import { createRendezVous } from "@/data/services";
+import type { Patient, Compte } from "@/types";
 
-const rdvDb = collection<RendezVous>("rendezVous");
 const patientDb = collection<Patient>("patients");
 const compteDb = collection<Compte>("comptes");
 
@@ -46,7 +46,7 @@ export default function NouveauRDV() {
 
     setLoading(true);
     try {
-      await rdvDb.create({
+      await createRendezVous({
         ...formData,
         statut: "planifie",
         createdAt: new Date().toISOString(),

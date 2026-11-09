@@ -2,44 +2,92 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function account() {
+      return get(/databases/$(database)/documents/comptes/$(request.auth.uid)).data;
+    }
+
     function activeStaff() {
-      return request.auth != null
-        && get(/databases/$(database)/documents/comptes/$(request.auth.uid)).data.actif == true;
+      return signedIn() && account().actif == true;
+    }
+
+    function clinicManager() {
+      return activeStaff() && account().role in ['admin', 'secretaire'];
+    }
+
+    function admin() {
+      return activeStaff() && account().role == 'admin';
+    }
+
+    function doctor() {
+      return activeStaff() && account().role == 'docteur';
+    }
+
+    function assignedDoctor(patientId) {
+      return doctor()
+        && patientId is string
+        && get(/databases/$(database)/documents/patients/$(patientId)).data.docteurIds is list
+        && request.auth.uid in get(/databases/$(database)/documents/patients/$(patientId)).data.docteurIds;
+    }
+
+    function assignedToDoctor(data) {
+      return doctor()
+        && data.docteurIds is list
+        && request.auth.uid in data.docteurIds;
     }
 
     match /comptes/{accountId} {
-      allow get: if request.auth != null && request.auth.uid == accountId;
-      allow list: if activeStaff();
-      allow create, update, delete: if activeStaff()
-        && get(/databases/$(database)/documents/comptes/$(request.auth.uid)).data.role == 'admin';
+      allow get: if signedIn() && request.auth.uid == accountId;
+      allow list: if clinicManager();
+      allow create, update, delete: if admin();
     }
 
-    match /patients/{document=**} {
-      allow read, write: if activeStaff();
+    match /patients/{patientId} {
+      allow get, list: if clinicManager() || assignedToDoctor(resource.data);
+      allow create, update, delete: if clinicManager();
     }
-    match /rendezVous/{document=**} {
-      allow read, write: if activeStaff();
+
+    match /rendezVous/{appointmentId} {
+      allow get, list: if clinicManager()
+        || (doctor() && resource.data.docteurId == request.auth.uid);
+      allow create, update, delete: if clinicManager();
     }
-    match /rdvs/{document=**} {
-      allow read, write: if activeStaff();
+
+    match /rdvs/{appointmentId} {
+      allow get, list: if clinicManager()
+        || (doctor() && resource.data.docteurId == request.auth.uid);
+      allow create, update, delete: if clinicManager();
     }
-    match /dossiers/{document=**} {
-      allow read, write: if activeStaff();
+
+    match /dossiers/{dossierId} {
+      allow get, list: if clinicManager() || assignedToDoctor(resource.data);
+      allow create, update, delete: if clinicManager();
     }
-    match /factures/{document=**} {
-      allow read, write: if activeStaff();
+
+    match /soins/{careId} {
+      allow get, list: if clinicManager() || assignedDoctor(resource.data.patientId);
+      allow create, update, delete: if clinicManager();
     }
-    match /actes/{document=**} {
-      allow read, write: if activeStaff();
+
+    match /factures/{invoiceId} {
+      allow read, write: if clinicManager();
     }
-    match /entreprises/{document=**} {
-      allow read, write: if activeStaff();
+
+    match /rappels/{reminderId} {
+      allow read, write: if clinicManager();
     }
-    match /soins/{document=**} {
-      allow read, write: if activeStaff();
+
+    match /actes/{actId} {
+      allow read: if clinicManager();
+      allow write: if admin();
     }
-    match /rappels/{document=**} {
-      allow read, write: if activeStaff();
+
+    match /entreprises/{companyId} {
+      allow read: if clinicManager();
+      allow write: if admin();
     }
   }
 }

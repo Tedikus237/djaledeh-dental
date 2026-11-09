@@ -61,7 +61,7 @@ export default function App() {
       <Route path="/factures/:id" element={page(GESTION, <DetailFacture />)} />
       
       {/* 👇 ROUTE WHATSAPP 👇 */}
-      <Route path="/whatsapp" element={page(TOUS, <Rappels />)} />
+      <Route path="/whatsapp" element={page(GESTION, <Rappels />)} />
       
       <Route path="/" element={<Racine />} />
       <Route path="*" element={<Racine />} />

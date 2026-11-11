@@ -4,7 +4,7 @@ import { useAcces } from "@/auth/useAcces";
 import { IconCalendar, IconFile, IconPrint, IconTrash } from "@/components/icons";
 import { Button } from "@/components/ui/Button";
 import { Card, CardTitle, PageHeader } from "@/components/ui/Card";
-import { PageSkeleton } from "@/components/ui/Skeleton";
+import { PageLoadError, PageSkeleton } from "@/components/ui/Skeleton";
 import { Status } from "@/components/ui/Status";
 import { patients } from "@/data/services";
 import { useDonnees } from "@/data/useDonnees";
@@ -20,12 +20,14 @@ const STATUT_F: Record<StatutFacture, { label: string; tone: Tone }> = {
 
 export default function FichePatient() {
   const { id = "" } = useParams();
-  const d = useDonnees();
+  const donnees = useDonnees();
   const nav = useNavigate();
   const { docteurId, peutEditer } = useAcces();
   const [onglet, setOnglet] = useState<Onglet>("dossier");
   const [erreur, setErreur] = useState("");
-  if (!d) return <PageSkeleton />;
+  if (donnees.status === "loading") return <PageSkeleton />;
+  if (donnees.status === "error") return <PageLoadError error={donnees.error} />;
+  const d = donnees.data;
 
   const p = d.patients.find((x) => x.id === id);
   if (!p) return <Card className="p-10 text-center text-sm text-mute">Patient introuvable.</Card>;

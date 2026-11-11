@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, PageHeader } from "@/components/ui/Card";
-import { PageSkeleton } from "@/components/ui/Skeleton";
+import { PageLoadError, PageSkeleton } from "@/components/ui/Skeleton";
 import { Status } from "@/components/ui/Status";
 import { useDonnees } from "@/data/useDonnees";
 import type { Tone } from "@/lib/statuts";
@@ -15,10 +15,12 @@ export const STATUT_F: Record<StatutFacture, { label: string; tone: Tone }> = {
 const FILTRES: ["tous" | StatutFacture, string][] = [["tous", "Toutes"], ["impaye", "Impayées"], ["partiel", "Partielles"], ["paye", "Payées"]];
 
 export default function ListeFactures() {
-  const d = useDonnees();
+  const donnees = useDonnees();
   const nav = useNavigate();
   const [filtre, setFiltre] = useState<"tous" | StatutFacture>("tous");
-  if (!d) return <PageSkeleton />;
+  if (donnees.status === "loading") return <PageSkeleton />;
+  if (donnees.status === "error") return <PageLoadError error={donnees.error} />;
+  const d = donnees.data;
   const rows = d.factures.filter((f) => filtre === "tous" || f.statut === filtre).sort((a, b) => b.dateEmission.localeCompare(a.dateEmission) || b.numero.localeCompare(a.numero));
   const cols = "md:grid-cols-[90px_100px_1.5fr_1fr_1fr_110px]";
 

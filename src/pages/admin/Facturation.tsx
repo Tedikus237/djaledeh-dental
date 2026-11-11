@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { AreaChart, Donut, GroupedBars, HBars } from "@/components/charts";
 import { Card, CardTitle, PageHeader } from "@/components/ui/Card";
-import { PageSkeleton } from "@/components/ui/Skeleton";
+import { PageLoadError, PageSkeleton } from "@/components/ui/Skeleton";
 import { StatGrid } from "@/components/ui/Stat";
 import { useDonnees } from "@/data/useDonnees";
 import { buckets, type Periode } from "@/lib/periodes";
@@ -12,9 +12,11 @@ const PERIODES: [Periode, string][] = [["7j", "7 jours"], ["30j", "30 jours"], [
 const somme = (xs: number[]) => xs.reduce((s, x) => s + x, 0);
 
 export default function Facturation() {
-  const d = useDonnees();
+  const donnees = useDonnees();
   const [per, setPer] = useState<Periode>("30j");
-  if (!d) return <PageSkeleton />;
+  if (donnees.status === "loading") return <PageSkeleton />;
+  if (donnees.status === "error") return <PageLoadError error={donnees.error} />;
+  const d = donnees.data;
 
   const bs = buckets(per), from = bs[0].from, to = bs[bs.length - 1].to;
   const dans = (date: string, a = from, b = to) => date >= a && date < b;

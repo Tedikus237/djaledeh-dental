@@ -4,17 +4,19 @@ import { IconPlus } from "@/components/icons";
 import { RdvList } from "@/components/RdvList";
 import { Button } from "@/components/ui/Button";
 import { Card, CardTitle, PageHeader } from "@/components/ui/Card";
-import { PageSkeleton } from "@/components/ui/Skeleton";
+import { PageLoadError, PageSkeleton } from "@/components/ui/Skeleton";
 import { StatGrid } from "@/components/ui/Stat";
 import { useDonnees } from "@/data/useDonnees";
 import { addDays, isoDay } from "@/lib/dates";
 import { formatFcfa } from "@/lib/utils";
 
 export default function DashboardSecretaire() {
-  const d = useDonnees();
+  const donnees = useDonnees();
   const nav = useNavigate();
   const { readOnly } = useAuth();
-  if (!d) return <PageSkeleton />;
+  if (donnees.status === "loading") return <PageSkeleton />;
+  if (donnees.status === "error") return <PageLoadError error={donnees.error} />;
+  const d = donnees.data;
 
   const today = isoDay(), demain = addDays(1);
   const duJour = d.rdvs.filter((r) => r.dateRdv === today).sort((a, b) => a.heureRdv.localeCompare(b.heureRdv));

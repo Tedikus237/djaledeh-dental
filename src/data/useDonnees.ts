@@ -27,4 +27,4 @@ export function useDonnees() {
     };
   });
 }
-export type Donnees = NonNullable<ReturnType<typeof useDonnees>>;
+export type Donnees = Extract<ReturnType<typeof useDonnees>, { status: "success" }>["data"];

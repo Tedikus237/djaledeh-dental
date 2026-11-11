@@ -3,17 +3,19 @@ import { useNavigate } from "react-router-dom";
 import { IconArrowLeft, IconRefresh } from "@/components/icons";
 import { Button } from "@/components/ui/Button";
 import { Card, PageHeader } from "@/components/ui/Card";
-import { PageSkeleton } from "@/components/ui/Skeleton";
+import { PageLoadError, PageSkeleton } from "@/components/ui/Skeleton";
 import { useDonnees } from "@/data/useDonnees";
 import { patients } from "@/data/services";
 import { formatDateFr } from "@/lib/utils";
 
 export default function CorbeillePatients() {
-  const d = useDonnees();
+  const donnees = useDonnees();
   const nav = useNavigate();
   const [restauration, setRestauration] = useState<string | null>(null);
   const [erreur, setErreur] = useState("");
-  if (!d) return <PageSkeleton />;
+  if (donnees.status === "loading") return <PageSkeleton />;
+  if (donnees.status === "error") return <PageLoadError error={donnees.error} />;
+  const d = donnees.data;
 
   const supprimes = d.patients.filter((p) => p.deletedAt);
 

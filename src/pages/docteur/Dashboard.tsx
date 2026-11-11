@@ -1,15 +1,18 @@
 import { useAuth } from "@/auth/AuthContext";
 import { RdvList } from "@/components/RdvList";
 import { Card, CardTitle, PageHeader } from "@/components/ui/Card";
-import { PageSkeleton } from "@/components/ui/Skeleton";
+import { PageLoadError, PageSkeleton } from "@/components/ui/Skeleton";
 import { StatGrid } from "@/components/ui/Stat";
 import { useDonnees } from "@/data/useDonnees";
 import { isoDay } from "@/lib/dates";
 
 export default function DashboardDocteur() {
-  const d = useDonnees();
+  const donnees = useDonnees();
   const { user } = useAuth();
-  if (!d || !user) return <PageSkeleton />;
+  if (donnees.status === "loading") return <PageSkeleton />;
+  if (donnees.status === "error") return <PageLoadError error={donnees.error} />;
+  const d = donnees.data;
+  if (!user) return <PageSkeleton />;
 
   // Un administrateur qui consulte cette interface voit celle de Dr Paul.
   const moi = user.role === "docteur" ? user : d.comptes.find((c) => c.id === "u-drpaul") ?? user;

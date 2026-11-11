@@ -3,7 +3,7 @@ import { IconPlus } from "@/components/icons";
 import { Button } from "@/components/ui/Button";
 import { Card, CardTitle, PageHeader } from "@/components/ui/Card";
 import { RdvList } from "@/components/RdvList";
-import { PageSkeleton } from "@/components/ui/Skeleton";
+import { PageLoadError, PageSkeleton } from "@/components/ui/Skeleton";
 import { StatGrid } from "@/components/ui/Stat";
 import { useDonnees } from "@/data/useDonnees";
 import { isoDay } from "@/lib/dates";
@@ -12,9 +12,11 @@ import { formatFcfa } from "@/lib/utils";
 const ROLE = { admin: "Administrateur", docteur: "Docteur", secretaire: "Secrétaire" } as const;
 
 export default function DashboardAdmin() {
-  const d = useDonnees();
+  const donnees = useDonnees();
   const nav = useNavigate();
-  if (!d) return <PageSkeleton />;
+  if (donnees.status === "loading") return <PageSkeleton />;
+  if (donnees.status === "error") return <PageLoadError error={donnees.error} />;
+  const d = donnees.data;
 
   const today = isoDay();
   const duJour = d.rdvs.filter((r) => r.dateRdv === today).sort((a, b) => a.heureRdv.localeCompare(b.heureRdv));

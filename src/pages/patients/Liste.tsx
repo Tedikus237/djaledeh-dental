@@ -3,7 +3,7 @@ import { useAcces } from "@/auth/useAcces";
 import { IconPlus, IconSearch } from "@/components/icons";
 import { Button } from "@/components/ui/Button";
 import { Card, PageHeader } from "@/components/ui/Card";
-import { PageSkeleton } from "@/components/ui/Skeleton";
+import { PageLoadError, PageSkeleton } from "@/components/ui/Skeleton";
 import { useDonnees } from "@/data/useDonnees";
 import { isoDay } from "@/lib/dates";
 import { formatDateFr, formatFcfa } from "@/lib/utils";
@@ -11,11 +11,13 @@ import { formatDateFr, formatFcfa } from "@/lib/utils";
 const norm = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
 export default function ListePatients() {
-  const d = useDonnees();
+  const donnees = useDonnees();
   const nav = useNavigate();
   const [params, setParams] = useSearchParams();
   const { docteurId, peutEditer } = useAcces();
-  if (!d) return <PageSkeleton />;
+  if (donnees.status === "loading") return <PageSkeleton />;
+  if (donnees.status === "error") return <PageLoadError error={donnees.error} />;
+  const d = donnees.data;
 
   const q = params.get("q") ?? "";
   const today = isoDay();

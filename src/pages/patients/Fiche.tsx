@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAcces } from "@/auth/useAcces";
 import { IconCalendar, IconFile, IconPrint, IconTrash } from "@/components/icons";
@@ -6,12 +6,12 @@ import { Button } from "@/components/ui/Button";
 import { Card, CardTitle, PageHeader } from "@/components/ui/Card";
 import { PageLoadError, PageSkeleton } from "@/components/ui/Skeleton";
 import { Status } from "@/components/ui/Status";
-import { patients } from "@/data/services";
+import { dossiers, patients } from "@/data/services";
 import { useDonnees } from "@/data/useDonnees";
 import { statutRdv, type Tone } from "@/lib/statuts";
 import { estAssure } from "@/lib/tarifs";
 import { cn, formatDateFr, formatFcfa } from "@/lib/utils";
-import type { StatutFacture } from "@/types";
+import type { DossierMedical, StatutFacture } from "@/types";
 
 type Onglet = "dossier" | "rdv" | "factures";
 const STATUT_F: Record<StatutFacture, { label: string; tone: Tone }> = {
@@ -25,12 +25,30 @@ export default function FichePatient() {
   const { docteurId, peutEditer } = useAcces();
   const [onglet, setOnglet] = useState<Onglet>("dossier");
   const [erreur, setErreur] = useState("");
+  const [dossierState, setDossierState] = useState<{ patientId: string; status: "loading" } | { patientId: string; status: "error"; error: Error } | { patientId: string; status: "success"; data: DossierMedical | null } | null>(null);
+  const d = donnees.status === "success" ? donnees.data : null;
+  const p = d?.patients.find((x) => x.id === id);
+
+  useEffect(() => {
+    if (!d || !p) return;
+    let active = true;
+    void dossiers.list([{ field: "patientId", operator: "==", value: id }])
+      .then((items) => {
+        if (active) setDossierState({ patientId: id, status: "success", data: items.find((item) => item.patientId === id) ?? null });
+      })
+      .catch((error: unknown) => {
+        if (active) setDossierState({ patientId: id, status: "error", error: error instanceof Error ? error : new Error("Impossible de charger le dossier médical.") });
+      });
+    return () => { active = false; };
+  }, [d, id, p]);
+
   if (donnees.status === "loading") return <PageSkeleton />;
   if (donnees.status === "error") return <PageLoadError error={donnees.error} />;
-  const d = donnees.data;
+  if (!d) return <PageSkeleton />;
 
-  const p = d.patients.find((x) => x.id === id);
   if (!p) return <Card className="p-10 text-center text-sm text-mute">Patient introuvable.</Card>;
+  if (dossierState?.patientId !== id || dossierState.status === "loading" || !dossierState) return <PageSkeleton />;
+  if (dossierState.status === "error") return <PageLoadError error={dossierState.error} />;
   if (docteurId && !d.rdvs.some((r) => r.patientId === id && r.docteurId === docteurId))
     return <Card className="p-10 text-center text-sm text-mute">Ce patient n'a pas de rendez-vous avec vous : accès non autorisé.</Card>;
   if (p.deletedAt) return (
@@ -44,7 +62,7 @@ export default function FichePatient() {
 
   const rdvsP = d.rdvs.filter((r) => r.patientId === id).sort((a, b) => (b.dateRdv + b.heureRdv).localeCompare(a.dateRdv + a.heureRdv));
   const facs = d.factures.filter((f) => f.patientId === id);
-  const dossier = d.dossiers.find((x) => x.patientId === id);
+  const dossier = dossierState.data;
   const nomPatient = `${p.prenom} ${p.nom}`;
   async function mettreEnCorbeille() {
     if (!window.confirm(`Déplacer le dossier de ${nomPatient} dans la corbeille ? Ses rendez-vous, factures et données médicales seront conservés.`)) return;

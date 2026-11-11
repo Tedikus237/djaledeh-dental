@@ -63,7 +63,7 @@ service cloud.firestore {
     }
 
     match /dossiers/{dossierId} {
-      allow get, list: if clinicManager() || assignedToDoctor(resource.data);
+      allow get, list: if clinicManager() || assignedDoctor(resource.data.patientId);
       allow create, update, delete: if clinicManager();
     }
 

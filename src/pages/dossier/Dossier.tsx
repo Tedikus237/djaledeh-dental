@@ -54,12 +54,12 @@ export default function Dossier() {
           return;
         }
         setP(pat);
-        const filtreDocteur = docteurId ? [{ field: "docteurIds", operator: "array-contains" as const, value: docteurId }] : [];
+        const filtreDossier = [{ field: "patientId", operator: "==" as const, value: id }];
         const filtreSoins = [{ field: "patientId", operator: "==" as const, value: id }];
         const [anciens, nouveaux, listeDossiers, listeSoins] = await Promise.all([
           rdvs.list(docteurId ? [{ field: "docteurId", operator: "==", value: docteurId }] : []),
           rendezVous.list(docteurId ? [{ field: "docteurId", operator: "==", value: docteurId }] : []),
-          dossiers.list(filtreDocteur),
+          dossiers.list(filtreDossier),
           soins.list(filtreSoins),
         ]);
         if (docteurId && ![...anciens, ...nouveaux].some((r) => r.patientId === id)) {

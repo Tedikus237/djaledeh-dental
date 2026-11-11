@@ -8,14 +8,16 @@ import { isoDay } from "@/lib/dates";
 
 export default function DashboardDocteur() {
   const donnees = useDonnees();
-  const { user } = useAuth();
+  const { user, viewAsDoctor } = useAuth();
   if (donnees.status === "loading") return <PageSkeleton />;
   if (donnees.status === "error") return <PageLoadError error={donnees.error} />;
   const d = donnees.data;
   if (!user) return <PageSkeleton />;
 
-  // Un administrateur qui consulte cette interface voit celle de Dr Paul.
-  const moi = user.role === "docteur" ? user : d.comptes.find((c) => c.id === "u-drpaul") ?? user;
+  const moi = user.role === "docteur"
+    ? user
+    : viewAsDoctor ?? d.comptes.find((c) => c.role === "docteur" && c.actif);
+  if (!moi) return <PageLoadError error={new Error("Aucun compte docteur actif n’est configuré pour cet aperçu.")} />;
   const today = isoDay();
   const mes = d.rdvs.filter((r) => r.docteurId === moi.id).sort((a, b) => (a.dateRdv + a.heureRdv).localeCompare(b.dateRdv + b.heureRdv));
   const duJour = mes.filter((r) => r.dateRdv === today);

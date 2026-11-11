@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { useAuth } from "@/auth/AuthContext";
+import { useAcces } from "@/auth/useAcces";
 import { PageHeader, Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { patients, rdvs as anciennesVisites, rendezVous } from "@/data/services";
 import type { RendezVous, StatutRdv } from "@/types";
 
 export default function Calendrier() {
-  const { user } = useAuth();
+  const { docteurId } = useAcces();
   const [rdvs, setRdvs] = useState<(RendezVous & { patientNom?: string })[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -15,11 +15,11 @@ export default function Calendrier() {
   useEffect(() => {
     const chargerDonnees = async () => {
       try {
-        const filtreDocteur = user?.role === "docteur"
-          ? [{ field: "docteurId", operator: "==" as const, value: user.id }]
+        const filtreDocteur = docteurId
+          ? [{ field: "docteurId", operator: "==" as const, value: docteurId }]
           : [];
-        const filtrePatients = user?.role === "docteur"
-          ? [{ field: "docteurIds", operator: "array-contains" as const, value: user.id }]
+        const filtrePatients = docteurId
+          ? [{ field: "docteurIds", operator: "array-contains" as const, value: docteurId }]
           : [];
         const [anciens, nouveaux, listePatients] = await Promise.all([
           anciennesVisites.list(filtreDocteur),
@@ -46,7 +46,7 @@ export default function Calendrier() {
     };
 
     void chargerDonnees();
-  }, [user]);
+  }, [docteurId]);
 
   const getStatutBadge = (statut: StatutRdv) => {
     switch(statut) {

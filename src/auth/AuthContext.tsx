@@ -15,6 +15,7 @@ const norm = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").t
 
 interface Ctx {
   user: Compte | null;
+  viewAsDoctor: Compte | null;
   role: Role | null;
   viewAs: Role | null;
   readOnly: boolean;
@@ -22,7 +23,7 @@ interface Ctx {
   connectionError: string | null;
   login: (identifiant: string, password: string) => Promise<Compte>;
   logout: () => Promise<void>;
-  startViewAs: (r: Role) => void;
+  startViewAs: (r: Role) => Promise<boolean>;
   stopViewAs: () => void;
 }
 
@@ -33,6 +34,7 @@ export const homePath = (r: Role) => (r === "admin" ? "/admin" : r === "docteur"
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<Compte | null>(null);
   const [viewAs, setViewAs] = useState<Role | null>(null);
+  const [viewAsDoctor, setViewAsDoctor] = useState<Compte | null>(null);
   const [ready, setReady] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
 
@@ -102,6 +104,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setConnectionError(null);
       setUser(account);
       setViewAs(null);
+      setViewAsDoctor(null);
       return account;
     }
 
@@ -111,6 +114,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(SESSION, c.id);
     setUser(c);
     setViewAs(null);
+    setViewAsDoctor(null);
     return c;
   }, []);
 
@@ -126,15 +130,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem(SESSION);
     setUser(null);
     setViewAs(null);
+    setViewAsDoctor(null);
   }, []);
 
-  const startViewAs = useCallback((r: Role) => { if (user?.role === "admin") setViewAs(r); }, [user]);
-  const stopViewAs = useCallback(() => setViewAs(null), []);
+  const startViewAs = useCallback(async (r: Role) => {
+    if (user?.role !== "admin") return false;
+    setConnectionError(null);
+    if (r === "docteur") {
+      try {
+        const doctor = (await comptes.list()).find((account) => account.role === "docteur" && account.actif);
+        if (!doctor) throw new Error("Aucun compte docteur actif n’est configuré.");
+        setViewAsDoctor(doctor);
+      } catch (error) {
+        setConnectionError(`Impossible de charger le compte du docteur pour l’aperçu : ${error instanceof Error ? error.message : "erreur inconnue."}`);
+        return false;
+      }
+    } else {
+      setViewAsDoctor(null);
+    }
+    setViewAs(r);
+    return true;
+  }, [user]);
+  const stopViewAs = useCallback(() => {
+    setViewAs(null);
+    setViewAsDoctor(null);
+    setConnectionError(null);
+  }, []);
 
   const value = useMemo<Ctx>(() => ({
-    user, role: user ? viewAs ?? user.role : null, viewAs, readOnly: viewAs !== null,
+    user, viewAsDoctor, role: user ? viewAs ?? user.role : null, viewAs, readOnly: viewAs !== null,
     ready, connectionError, login, logout, startViewAs, stopViewAs
-  }), [user, viewAs, ready, connectionError, login, logout, startViewAs, stopViewAs]);
+  }), [user, viewAsDoctor, viewAs, ready, connectionError, login, logout, startViewAs, stopViewAs]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

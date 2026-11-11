@@ -12,15 +12,15 @@ async function avecContexte<T>(collection: string, lecture: Promise<T>): Promise
 }
 
 export function useDonnees() {
-  const { user } = useAuth();
+  const { user, role, viewAsDoctor } = useAuth();
   return useAsync(async () => {
-    const estDocteur = user?.role === "docteur";
-    const filtreDocteur = user?.id ?? "";
+    const estDocteur = role === "docteur";
+    const filtreDocteur = user?.role === "docteur" ? user.id : viewAsDoctor?.id ?? "";
     const [legacyRdvs, cabinetRdvs, p, c, f, w, d, s, a, e] = await Promise.all([
       avecContexte("rdvs", rdvs.list(estDocteur ? [{ field: "docteurId", operator: "==", value: filtreDocteur }] : [])),
       avecContexte("rendezVous", rendezVous.list(estDocteur ? [{ field: "docteurId", operator: "==", value: filtreDocteur }] : [])),
       avecContexte("patients", patients.list(estDocteur ? [{ field: "docteurIds", operator: "array-contains", value: filtreDocteur }] : [])),
-      estDocteur ? Promise.resolve(user ? [user] : []) : avecContexte("comptes", comptes.list()),
+      estDocteur ? Promise.resolve(viewAsDoctor ? [viewAsDoctor] : user?.role === "docteur" ? [user] : []) : avecContexte("comptes", comptes.list()),
       estDocteur ? Promise.resolve([]) : avecContexte("factures", factures.list()),
       estDocteur ? Promise.resolve([]) : avecContexte("rappels", rappels.list()),
       avecContexte("dossiers", dossiers.list(estDocteur ? [{ field: "docteurIds", operator: "array-contains", value: filtreDocteur }] : [])),

@@ -37,12 +37,20 @@ const NAV: Record<Role, NavItem[]> = {
 const LABEL: Record<Role, string> = { secretaire: "secrétaire", docteur: "docteur", admin: "administrateur" };
 
 export function AppShell({ children }: { children: ReactNode }) {
-  const { user, role, viewAs, logout, connectionError, startViewAs, stopViewAs } = useAuth();
+  const { user, role, viewAs, viewAsDoctor, logout, connectionError, startViewAs, stopViewAs } = useAuth();
   const nav = useNavigate();
   const [open, setOpen] = useState(false);
   if (!user || !role) return null;
 
-  const voir = (r: Role) => { startViewAs(r); setOpen(false); nav(homePath(r)); };
+  const voir = async (r: Role) => {
+    setOpen(false);
+    const started = await startViewAs(r);
+    if (!started) {
+      nav(homePath("admin"));
+      return;
+    }
+    nav(homePath(r));
+  };
   const revenir = () => { stopViewAs(); nav("/admin"); };
 
   return (
@@ -66,8 +74,8 @@ export function AppShell({ children }: { children: ReactNode }) {
           <div className="border-t border-line p-3">
             <p className="eyebrow mb-2 px-2">Voir l'interface</p>
             {(["secretaire", "docteur"] as Role[]).map((r) => (
-              <button key={r} onClick={() => voir(r)} className={cn("flex h-11 w-full items-center rounded-xl px-3 text-left text-sm capitalize transition-colors md:h-10", viewAs === r ? "bg-ink text-white" : "text-mute hover:bg-canvas hover:text-ink")}>
-                {LABEL[r]}
+              <button key={r} onClick={() => void voir(r)} className={cn("flex h-11 w-full items-center rounded-xl px-3 text-left text-sm capitalize transition-colors md:h-10", viewAs === r ? "bg-ink text-white" : "text-mute hover:bg-canvas hover:text-ink")}>
+                {r === "docteur" && viewAsDoctor ? viewAsDoctor.nom : LABEL[r]}
               </button>
             ))}
           </div>

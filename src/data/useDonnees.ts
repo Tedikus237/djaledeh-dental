@@ -2,22 +2,31 @@ import { useAsync } from "@/lib/useAsync";
 import { useAuth } from "@/auth/AuthContext";
 import { actes, comptes, dossiers, entreprises, factures, patients, rappels, rdvs, rendezVous, soins } from "./services";
 
+async function avecContexte<T>(collection: string, lecture: Promise<T>): Promise<T> {
+  try {
+    return await lecture;
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : "Erreur inconnue";
+    throw new Error(`Lecture refusée pour « ${collection} » : ${detail}`, { cause: error });
+  }
+}
+
 export function useDonnees() {
   const { user } = useAuth();
   return useAsync(async () => {
     const estDocteur = user?.role === "docteur";
     const filtreDocteur = user?.id ?? "";
     const [legacyRdvs, cabinetRdvs, p, c, f, w, d, s, a, e] = await Promise.all([
-      rdvs.list(estDocteur ? [{ field: "docteurId", operator: "==", value: filtreDocteur }] : []),
-      rendezVous.list(estDocteur ? [{ field: "docteurId", operator: "==", value: filtreDocteur }] : []),
-      patients.list(estDocteur ? [{ field: "docteurIds", operator: "array-contains", value: filtreDocteur }] : []),
-      estDocteur ? Promise.resolve(user ? [user] : []) : comptes.list(),
-      estDocteur ? Promise.resolve([]) : factures.list(),
-      estDocteur ? Promise.resolve([]) : rappels.list(),
-      dossiers.list(estDocteur ? [{ field: "docteurIds", operator: "array-contains", value: filtreDocteur }] : []),
-      estDocteur ? Promise.resolve([]) : soins.list(),
-      estDocteur ? Promise.resolve([]) : actes.list(),
-      estDocteur ? Promise.resolve([]) : entreprises.list(),
+      avecContexte("rdvs", rdvs.list(estDocteur ? [{ field: "docteurId", operator: "==", value: filtreDocteur }] : [])),
+      avecContexte("rendezVous", rendezVous.list(estDocteur ? [{ field: "docteurId", operator: "==", value: filtreDocteur }] : [])),
+      avecContexte("patients", patients.list(estDocteur ? [{ field: "docteurIds", operator: "array-contains", value: filtreDocteur }] : [])),
+      estDocteur ? Promise.resolve(user ? [user] : []) : avecContexte("comptes", comptes.list()),
+      estDocteur ? Promise.resolve([]) : avecContexte("factures", factures.list()),
+      estDocteur ? Promise.resolve([]) : avecContexte("rappels", rappels.list()),
+      avecContexte("dossiers", dossiers.list(estDocteur ? [{ field: "docteurIds", operator: "array-contains", value: filtreDocteur }] : [])),
+      estDocteur ? Promise.resolve([]) : avecContexte("soins", soins.list()),
+      estDocteur ? Promise.resolve([]) : avecContexte("actes", actes.list()),
+      estDocteur ? Promise.resolve([]) : avecContexte("entreprises", entreprises.list()),
     ]);
     const r = [...legacyRdvs, ...cabinetRdvs];
     return {

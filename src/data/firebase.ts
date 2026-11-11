@@ -186,6 +186,15 @@ export async function firestoreCreate<T extends { id: string }>(name: string, id
   return row;
 }
 
+export async function firestoreCreateMany<T extends { id: string }>(name: string, rows: T[]): Promise<void> {
+  const batch = writeBatch(getFirebaseDb());
+  for (const row of rows) {
+    batch.set(firestoreDocumentRef(name, row.id), row as T & DocumentData);
+  }
+  await batch.commit();
+  invalidateReadCache(name);
+}
+
 export async function firestoreCreateAppointment<T extends { id: string; patientId: string; docteurId: string }>(
   id: string,
   data: Omit<T, "id">,

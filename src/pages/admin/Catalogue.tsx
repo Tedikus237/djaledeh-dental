@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Card, PageHeader } from "@/components/ui/Card";
 import { Input, Select } from "@/components/ui/Field";
-import { PageSkeleton } from "@/components/ui/Skeleton";
+import { PageLoadError, PageSkeleton } from "@/components/ui/Skeleton";
+import { initialiserCatalogueActes } from "@/data/seed";
 import { actes } from "@/data/services";
 import { LETTRES, libelleCode, prixAssure } from "@/lib/tarifs";
 import { formatFcfa } from "@/lib/utils";
@@ -15,15 +16,43 @@ export default function Catalogue() {
   const [q, setQ] = useState("");
   const [nv, setNv] = useState({ libelle: "", lettre: "D" as Lettre, coefficient: "", prixNonAssure: "", dureeMinutes: "30" });
   const [err, setErr] = useState("");
-  const charger = async () => setRows(await actes.list());
-  useEffect(() => { charger(); }, []);
-  if (!rows) return <PageSkeleton />;
+  const [erreurChargement, setErreurChargement] = useState("");
+  const [notice, setNotice] = useState("");
+  useEffect(() => {
+    let active = true;
+    void actes.list()
+      .then(async (current) => current.length ? { rows: current, added: 0 } : initialiserCatalogueActes())
+      .then((result) => {
+        if (!active) return;
+        setRows(result.rows);
+        if (result.added) setNotice(`Catalogue de base chargé : ${result.added} actes ajoutés.`);
+      })
+      .catch((error: unknown) => {
+        if (active) setErreurChargement(error instanceof Error ? error.message : "Impossible de charger le catalogue des actes.");
+      });
+    return () => { active = false; };
+  }, []);
+  if (!rows) return erreurChargement ? <PageLoadError error={new Error(erreurChargement)} /> : <PageSkeleton />;
 
-  const maj = async (a: Acte, patch: Partial<Acte>) => { await actes.update(a.id, patch); charger(); };
+  const maj = async (a: Acte, patch: Partial<Acte>) => {
+    try {
+      await actes.update(a.id, patch);
+      setRows((current) => current?.map((row) => row.id === a.id ? { ...row, ...patch } : row) ?? null);
+      setErr("");
+    } catch (error) {
+      setErr(error instanceof Error ? error.message : `Impossible de mettre à jour « ${a.libelle} ».`);
+    }
+  };
   async function ajouter() {
     if (!nv.libelle.trim() || !(Number(nv.coefficient) > 0)) return setErr("Indiquez le libellé et un coefficient supérieur à 0.");
-    await actes.create({ libelle: nv.libelle.trim(), lettre: nv.lettre, coefficient: Number(nv.coefficient), prixNonAssure: Number(nv.prixNonAssure) || 0, dureeMinutes: Number(nv.dureeMinutes) || 30, actif: true });
-    setNv({ ...nv, libelle: "", coefficient: "", prixNonAssure: "" }); setErr(""); charger();
+    try {
+      const created = await actes.create({ libelle: nv.libelle.trim(), lettre: nv.lettre, coefficient: Number(nv.coefficient), prixNonAssure: Number(nv.prixNonAssure) || 0, dureeMinutes: Number(nv.dureeMinutes) || 30, actif: true });
+      setRows((current) => current ? [...current, created] : [created]);
+      setNv({ ...nv, libelle: "", coefficient: "", prixNonAssure: "" });
+      setErr("");
+    } catch (error) {
+      setErr(error instanceof Error ? error.message : "Impossible d’ajouter cet acte au catalogue.");
+    }
   }
   const liste = rows.filter((a) => a.libelle.toLowerCase().includes(q.toLowerCase()));
 
@@ -31,6 +60,7 @@ export default function Catalogue() {
     <>
       <PageHeader eyebrow="Paramètres" title="Catalogue des actes" />
       <p className="mb-4 max-w-2xl text-sm text-mute">Seuls les actes cochés sont proposés à la secrétaire. Le prix « assuré » suit la nomenclature (coefficient × lettre). Saisissez ici le tarif propre aux patients non assurés. Tant qu’il vaut 0, l’acte ne peut pas être ajouté à leur facture.</p>
+      {notice && <p role="status" className="mb-4 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800">{notice}</p>}
 
       <Card className="mb-6 animate-rise p-5">
         <p className="eyebrow mb-4">Ajouter un acte</p>

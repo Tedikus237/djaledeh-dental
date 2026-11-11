@@ -4,13 +4,13 @@ import { calculerAge } from "@/lib/utils";
 import type { Acte, Facture, Lettre, LigneSoin, NatureConsultation, Paiement, RappelWhatsapp, RendezVous, Soin, StatutRdv } from "@/types";
 import { uid } from "./db";
 import { actes, comptes, dossiers, entreprises, factures, patients, rappels, rdvs, soins } from "./services";
-import { isFirebaseBackend } from "./firebase";
+import { firestoreCreateMany, isFirebaseBackend } from "./firebase";
 
 const DAY_KEY = "djaledeh:seedDay";
 const DATA_KEY = "djaledeh:dataV";
 
 // [libellé, lettre, coefficient, durée en minutes] : extraits de la nomenclature de l'ONCDC.
-const ACTES: [string, Lettre, number, number][] = [
+export const ACTES_BASE: [string, Lettre, number, number][] = [
   ["Consultation", "C", 1, 20], ["Détartrage", "D", 16, 30], ["Radiographie rétro-alvéolaire", "Z", 6, 10], ["Radiographie panoramique", "Z", 20, 15],
   ["Obturation 1 face", "SC", 10, 30], ["Obturation 2 faces", "SC", 15, 40], ["Obturation 3 faces", "SC", 20, 45],
   ["Traitement canalaire incisive ou canine", "D", 15, 45], ["Traitement canalaire prémolaire", "D", 20, 60], ["Traitement canalaire molaire", "D", 35, 75],
@@ -20,6 +20,53 @@ const ACTES: [string, Lettre, number, number][] = [
   ["Évacuation d'abcès parodontal", "DC", 25, 20], ["Couronne provisoire", "F", 50000, 40], ["Couronne métallique", "F", 225000, 60],
   ["Couronne céramique", "F", 350000, 60], ["Prothèse complète bimaxillaire résine", "SPR", 170, 90]
 ];
+
+const PRIX_NON_ASSURE_BASE: Record<string, number> = {
+  Consultation: 3000,
+  "Obturation 1 face": 7500,
+  "Obturation 2 faces": 7500,
+  "Obturation 3 faces": 7500,
+  Détartrage: 10000,
+  "Extraction dentaire": 10000,
+  "Extraction dent lactéale": 10000,
+  "Dent de sagesse retenue": 10000,
+  "Traitement canalaire incisive ou canine": 20000,
+  "Traitement canalaire prémolaire": 20000,
+  "Traitement canalaire molaire": 20000,
+};
+
+export async function initialiserCatalogueActes() {
+  const existants = await actes.list();
+  const libellesExistants = new Set(existants.map((a) => a.libelle.trim().toLocaleLowerCase()));
+  const manquants = ACTES_BASE
+    .map(([libelle, lettre, coefficient, dureeMinutes], i): Acte => ({
+      id: `base-acte-${String(i + 1).padStart(2, "0")}`,
+      libelle,
+      lettre,
+      coefficient,
+      prixNonAssure: PRIX_NON_ASSURE_BASE[libelle] ?? 0,
+      dureeMinutes,
+      actif: true,
+    }))
+    .filter((a) => !libellesExistants.has(a.libelle.trim().toLocaleLowerCase()));
+
+  if (manquants.length) {
+    if (isFirebaseBackend()) {
+      await firestoreCreateMany("actes", manquants);
+    } else {
+      await Promise.all(manquants.map((a) => actes.create({
+        libelle: a.libelle,
+        lettre: a.lettre,
+        coefficient: a.coefficient,
+        prixNonAssure: a.prixNonAssure,
+        dureeMinutes: a.dureeMinutes,
+        actif: a.actif,
+      })));
+    }
+  }
+
+  return { rows: await actes.list(), added: manquants.length };
+}
 
 export async function seedIfEmpty() {
   if (isFirebaseBackend()) return;
@@ -52,8 +99,8 @@ export async function seedIfEmpty() {
       natureConsultation: nat, assuranceNom: ass, createdAt: now
     })));
 
-    const A: Acte[] = ACTES.map(([libelle, lettre, coefficient, dureeMinutes], i) => ({
-      id: `a${i + 1}`, libelle, lettre, coefficient, prixNonAssure: 0, dureeMinutes, actif: true
+    const A: Acte[] = ACTES_BASE.map(([libelle, lettre, coefficient, dureeMinutes], i) => ({
+      id: `a${i + 1}`, libelle, lettre, coefficient, prixNonAssure: PRIX_NON_ASSURE_BASE[libelle] ?? 0, dureeMinutes, actif: true
     }));
     await actes.replaceAll(A);
     // Pourcentages et coordonnées : valeurs d'exemple, à remplacer par celles du cabinet.

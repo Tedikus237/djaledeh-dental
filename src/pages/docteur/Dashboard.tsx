@@ -7,7 +7,7 @@ import { useDonnees } from "@/data/useDonnees";
 import { isoDay } from "@/lib/dates";
 
 export default function DashboardDocteur() {
-  const donnees = useDonnees();
+  const donnees = useDonnees({ toleratePatientReadError: true });
   const { user, viewAsDoctor } = useAuth();
   if (donnees.status === "loading") return <PageSkeleton />;
   if (donnees.status === "error") return <PageLoadError error={donnees.error} />;
@@ -40,11 +40,19 @@ export default function DashboardDocteur() {
         </Card>
         <Card className="animate-rise self-start overflow-hidden">
           <CardTitle eyebrow="Suivi" title="Mes patients" />
-          <ul className="divide-y divide-line">
-            {patientsIds.map((id) => (
-              <li key={id} className="px-5 py-3.5 text-sm font-medium">{d.patient(id)}</li>
-            ))}
-          </ul>
+          {d.patientsError ? (
+            <p role="alert" className="px-5 py-4 text-sm text-danger">
+              Impossible de charger la liste des patients : {d.patientsError.message}
+            </p>
+          ) : patientsIds.length ? (
+            <ul className="divide-y divide-line">
+              {patientsIds.map((id) => (
+                <li key={id} className="px-5 py-3.5 text-sm font-medium">{d.patient(id)}</li>
+              ))}
+            </ul>
+          ) : (
+            <p className="px-5 py-4 text-sm text-faint">Aucun patient suivi pour le moment.</p>
+          )}
         </Card>
       </div>
     </>

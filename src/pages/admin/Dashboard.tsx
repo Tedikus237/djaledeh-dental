@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { IconPlus } from "@/components/icons";
 import { Button } from "@/components/ui/Button";
@@ -5,6 +6,7 @@ import { Card, CardTitle, PageHeader } from "@/components/ui/Card";
 import { RdvList } from "@/components/RdvList";
 import { PageLoadError, PageSkeleton } from "@/components/ui/Skeleton";
 import { StatGrid } from "@/components/ui/Stat";
+import { synchroniserAccesPatientsDocteurs } from "@/data/services";
 import { useDonnees } from "@/data/useDonnees";
 import { isoDay } from "@/lib/dates";
 import { formatFcfa } from "@/lib/utils";
@@ -14,9 +16,35 @@ const ROLE = { admin: "Administrateur", docteur: "Docteur", secretaire: "Secrét
 export default function DashboardAdmin() {
   const donnees = useDonnees();
   const nav = useNavigate();
+  const [synchronisationEnCours, setSynchronisationEnCours] = useState(false);
+  const [messageSynchronisation, setMessageSynchronisation] = useState("");
+  const [erreurSynchronisation, setErreurSynchronisation] = useState("");
   if (donnees.status === "loading") return <PageSkeleton />;
   if (donnees.status === "error") return <PageLoadError error={donnees.error} />;
   const d = donnees.data;
+
+  async function synchroniserAffectations() {
+    if (!window.confirm("Associer chaque patient uniquement aux médecins indiqués dans ses rendez-vous enregistrés ?")) return;
+    setSynchronisationEnCours(true);
+    setMessageSynchronisation("");
+    setErreurSynchronisation("");
+    try {
+      const modifies = await synchroniserAccesPatientsDocteurs(
+        d.rdvs,
+        d.patients,
+        d.comptes.filter((compte) => compte.role === "docteur" && compte.actif).map((compte) => compte.id),
+      );
+      setMessageSynchronisation(
+        modifies
+          ? `${modifies} patient(s) rattaché(s) selon leurs rendez-vous avec un médecin actif.`
+          : "Les accès des patients correspondent déjà aux rendez-vous enregistrés.",
+      );
+    } catch (error) {
+      setErreurSynchronisation(error instanceof Error ? error.message : "Impossible de synchroniser les accès des patients.");
+    } finally {
+      setSynchronisationEnCours(false);
+    }
+  }
 
   const today = isoDay();
   const duJour = d.rdvs.filter((r) => r.dateRdv === today).sort((a, b) => a.heureRdv.localeCompare(b.heureRdv));
@@ -56,6 +84,15 @@ export default function DashboardAdmin() {
                 </li>
               ))}
             </ul>
+          </Card>
+          <Card className="animate-rise p-5">
+            <CardTitle eyebrow="Accès médecins" title="Patients déjà suivis" />
+            <p className="mb-4 text-sm text-mute">Rattache les patients à leurs médecins à partir des rendez-vous enregistrés, sans donner aux médecins accès aux autres patients.</p>
+            <Button onClick={() => void synchroniserAffectations()} disabled={synchronisationEnCours}>
+              {synchronisationEnCours ? "Synchronisation…" : "Synchroniser les affectations"}
+            </Button>
+            {messageSynchronisation && <p role="status" className="mt-3 text-sm text-emerald-800">{messageSynchronisation}</p>}
+            {erreurSynchronisation && <p role="alert" className="mt-3 text-sm text-danger">{erreurSynchronisation}</p>}
           </Card>
         </div>
       </div>

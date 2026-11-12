@@ -226,7 +226,7 @@ export async function firestoreRemove(name: string, id: string) {
   invalidateReadCache(name);
 }
 
-export async function firestoreAddDoctorAccess(name: string, id: string, doctorId: string) {
-  await updateDoc(firestoreDocumentRef(name, id), { docteurIds: arrayUnion(doctorId) });
+export async function firestoreAddDoctorAccess(name: string, id: string, doctorIds: string[]) {
+  await updateDoc(firestoreDocumentRef(name, id), { docteurIds: arrayUnion(...doctorIds) });
   invalidateReadCache(name);
 }

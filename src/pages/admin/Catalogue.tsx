@@ -21,7 +21,7 @@ export default function Catalogue() {
   useEffect(() => {
     let active = true;
     void actes.list()
-      .then(async (current) => current.length ? { rows: current, added: 0 } : initialiserCatalogueActes())
+      .then(() => initialiserCatalogueActes())
       .then((result) => {
         if (!active) return;
         setRows(result.rows);

@@ -22,7 +22,7 @@ export default function DashboardDocteur() {
   const mes = d.rdvs.filter((r) => r.docteurId === moi.id).sort((a, b) => (a.dateRdv + a.heureRdv).localeCompare(b.dateRdv + b.heureRdv));
   const duJour = mes.filter((r) => r.dateRdv === today);
   const aVenir = mes.filter((r) => r.dateRdv > today);
-  const patientsIds = Array.from(new Set(mes.map((r) => r.patientId)));
+  const patientsIds = d.patientsActifs.map((patient) => patient.id);
 
   return (
     <>

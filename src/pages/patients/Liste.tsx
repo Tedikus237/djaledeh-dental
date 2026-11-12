@@ -14,14 +14,14 @@ export default function ListePatients() {
   const donnees = useDonnees();
   const nav = useNavigate();
   const [params, setParams] = useSearchParams();
-  const { docteurId, peutEditer } = useAcces();
+  const { peutEditer } = useAcces();
   if (donnees.status === "loading") return <PageSkeleton />;
   if (donnees.status === "error") return <PageLoadError error={donnees.error} />;
   const d = donnees.data;
 
   const q = params.get("q") ?? "";
   const today = isoDay();
-  const visibles = d.patientsActifs.filter((p) => !docteurId || d.rdvs.some((r) => r.patientId === p.id && r.docteurId === docteurId));
+  const visibles = d.patientsActifs;
   const rows = visibles.filter((p) => !q || norm(`${p.nom} ${p.prenom} ${p.telephone} ${p.numeroDossier}`).includes(norm(q)));
   const dernier = (id: string) => d.rdvs.filter((r) => r.patientId === id && r.dateRdv <= today).map((r) => r.dateRdv).sort().pop();
   const solde = (id: string) => d.factures.filter((f) => f.patientId === id).reduce((s, f) => s + f.montantTotal - f.montantPaye, 0);

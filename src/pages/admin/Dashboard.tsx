@@ -36,8 +36,8 @@ export default function DashboardAdmin() {
       );
       setMessageSynchronisation(
         modifies
-          ? `${modifies} patient(s) rattaché(s) selon leurs rendez-vous avec un médecin actif.`
-          : "Les accès des patients correspondent déjà aux rendez-vous enregistrés.",
+          ? `Accès synchronisés pour ${modifies} patient(s) déjà attribué(s) à un médecin actif.`
+          : "Aucune affectation à synchroniser.",
       );
     } catch (error) {
       setErreurSynchronisation(error instanceof Error ? error.message : "Impossible de synchroniser les accès des patients.");
@@ -86,8 +86,8 @@ export default function DashboardAdmin() {
             </ul>
           </Card>
           <Card className="animate-rise p-5">
-            <CardTitle eyebrow="Accès médecins" title="Patients déjà suivis" />
-            <p className="mb-4 text-sm text-mute">Rattache les patients à leurs médecins à partir des rendez-vous enregistrés, sans donner aux médecins accès aux autres patients.</p>
+            <CardTitle eyebrow="Accès médecins" title="Synchroniser les patients attribués" />
+            <p className="mb-4 text-sm text-mute">Met à jour les accès sécurisés des patients déjà attribués dans leur dossier ou dans leurs rendez-vous, sans ouvrir l’accès aux autres patients.</p>
             <Button onClick={() => void synchroniserAffectations()} disabled={synchronisationEnCours}>
               {synchronisationEnCours ? "Synchronisation…" : "Synchroniser les affectations"}
             </Button>

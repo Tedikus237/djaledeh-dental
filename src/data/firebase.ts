@@ -206,6 +206,7 @@ export async function firestoreCreateAppointment<T extends { id: string; patient
   batch.update(doc(db, "patients", data.patientId), {
     docteurIds: arrayUnion(data.docteurId),
   });
+  batch.set(doc(db, "comptes", data.docteurId, "patients", data.patientId), { patientId: data.patientId });
   await batch.commit();
   invalidateReadCache("rendezVous");
   invalidateReadCache("patients");
@@ -229,4 +230,15 @@ export async function firestoreRemove(name: string, id: string) {
 export async function firestoreAddDoctorAccess(name: string, id: string, doctorIds: string[]) {
   await updateDoc(firestoreDocumentRef(name, id), { docteurIds: arrayUnion(...doctorIds) });
   invalidateReadCache(name);
+}
+
+export async function firestoreSyncDoctorPatientAccess(doctorId: string, patientIds: string[]) {
+  const db = getFirebaseDb();
+  for (let start = 0; start < patientIds.length; start += 400) {
+    const batch = writeBatch(db);
+    for (const patientId of patientIds.slice(start, start + 400)) {
+      batch.set(doc(db, "comptes", doctorId, "patients", patientId), { patientId });
+    }
+    await batch.commit();
+  }
 }

@@ -45,6 +45,11 @@ service cloud.firestore {
       allow create, update, delete: if admin();
     }
 
+    match /comptes/{accountId}/patients/{patientId} {
+      allow get, list: if clinicManager() || (doctor() && request.auth.uid == accountId);
+      allow create, update, delete: if clinicManager();
+    }
+
     match /patients/{patientId} {
       allow get, list: if clinicManager() || assignedToDoctor(resource.data);
       allow create, update, delete: if clinicManager();

@@ -1,6 +1,6 @@
 import { useAsync } from "@/lib/useAsync";
 import { useAuth } from "@/auth/AuthContext";
-import { actes, comptes, entreprises, factures, patients, rappels, rdvs, rendezVous, soins } from "./services";
+import { actes, comptes, entreprises, factures, patients, patientsDuDocteur, rappels, rdvs, rendezVous, soins } from "./services";
 
 async function avecContexte<T>(collection: string, lecture: Promise<T>): Promise<T> {
   try {
@@ -19,7 +19,7 @@ export function useDonnees() {
     const [legacyRdvs, cabinetRdvs, p, c, f, w, s, a, e] = await Promise.all([
       avecContexte("rdvs", rdvs.list(estDocteur ? [{ field: "docteurId", operator: "==", value: filtreDocteur }] : [])),
       avecContexte("rendezVous", rendezVous.list(estDocteur ? [{ field: "docteurId", operator: "==", value: filtreDocteur }] : [])),
-      avecContexte("patients", patients.list(estDocteur ? [{ field: "docteurIds", operator: "array-contains", value: filtreDocteur }] : [])),
+      avecContexte("patients", estDocteur ? patientsDuDocteur(filtreDocteur) : patients.list()),
       estDocteur ? Promise.resolve(viewAsDoctor ? [viewAsDoctor] : user?.role === "docteur" ? [user] : []) : avecContexte("comptes", comptes.list()),
       estDocteur ? Promise.resolve([]) : avecContexte("factures", factures.list()),
       estDocteur ? Promise.resolve([]) : avecContexte("rappels", rappels.list()),

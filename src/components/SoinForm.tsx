@@ -4,11 +4,11 @@ import { Input, Select } from "@/components/ui/Field";
 import { uid } from "@/data/db";
 import { actes as actesSvc, comptes, entreprises as entSvc, factures, soins } from "@/data/services";
 import { isoDay } from "@/lib/dates";
+import { categorieActe } from "@/lib/categories";
+import { MODES } from "@/lib/paiements";
 import { estAssure, libelleCode, prixActe, repartition, statutDe } from "@/lib/tarifs";
 import { formatFcfa } from "@/lib/utils";
 import type { Acte, Compte, Entreprise, LigneSoin, ModePaiement, Paiement, Patient } from "@/types";
-
-export const MODES: Record<ModePaiement, string> = { especes: "Espèces", mobile_money: "Mobile money", assurance: "Assurance", autre: "Autre" };
 
 export function SoinForm({ patient, onSaved }: { patient: Patient; onSaved: () => void }) {
   const assure = estAssure(patient.natureConsultation);
@@ -49,7 +49,7 @@ export function SoinForm({ patient, onSaved }: { patient: Patient; onSaved: () =
       return;
     }
     setErr("");
-    setLignes([...lignes, { acteId: a.id, code: libelleCode(a), libelle: a.libelle, qte: 1, montant: prixActe(a, assure) }]);
+    setLignes([...lignes, { acteId: a.id, code: libelleCode(a), libelle: a.libelle, categorie: categorieActe(a), qte: 1, montant: prixActe(a, assure) }]);
     setActeId("");
   }
 

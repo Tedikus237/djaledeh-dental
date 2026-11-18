@@ -1,12 +1,17 @@
 import { isoDay } from "./dates";
 
-export type Periode = "7j" | "30j" | "12m";
+export type Periode = "jour" | "7j" | "30j" | "12m";
 export interface Bucket { label: string; from: string; to: string }
 
 export function buckets(p: Periode): Bucket[] {
   const out: Bucket[] = [];
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+  if (p === "jour") {
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return [{ label: "Aujourd'hui", from: isoDay(today), to: isoDay(tomorrow) }];
+  }
   if (p === "12m") {
     for (let i = 11; i >= 0; i--) {
       const a = new Date(today.getFullYear(), today.getMonth() - i, 1);

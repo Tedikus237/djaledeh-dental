@@ -25,6 +25,7 @@ export type StatutRdv = "planifie" | "confirme" | "annule" | "termine" | "absent
 export interface RendezVous {
   id: string; patientId: string; docteurId: string; dateRdv: string; heureRdv: string;
   dureeMinutes: number; motif: string; statut: StatutRdv; createdAt: string;
+  confirmationClientLe?: string; confirmationClientPar?: string;
 }
 
 export interface RappelWhatsapp {
@@ -56,6 +57,7 @@ export interface LigneSoin {
   acteId: string;
   code: string;
   libelle: string;
+  categorie?: CategorieSoin;
   qte: number;
   montant: number;
 }
@@ -75,9 +77,10 @@ export interface DossierMedical {
 }
 
 export type Lettre = "C" | "D" | "DC" | "Z" | "SC" | "SPR" | "TO" | "F";
+export type CategorieSoin = "prothese" | "autres";
 export interface Acte {
   id: string; libelle: string; lettre: Lettre; coefficient: number;
-  prixNonAssure: number; dureeMinutes: number; actif: boolean;
+  prixNonAssure: number; dureeMinutes: number; actif: boolean; categorie?: CategorieSoin;
 }
 export interface Entreprise {
   id: string; nom: string; bp: string; contribuable: string; rccm: string; telephone: string;
@@ -96,4 +99,8 @@ export interface Facture {
   lignes: LigneSoin[]; montantTotal: number;
   entrepriseId: string; bonPriseEnCharge: string; partPatientPct: number; partPatient: number; netEntreprise: number;
   paiements: Paiement[]; montantPaye: number; statut: StatutFacture;
+}
+
+export interface Depense {
+  id: string; date: string; libelle: string; montant: number; createdAt: string; createdBy: string;
 }

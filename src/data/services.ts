@@ -1,6 +1,6 @@
 import { collection, uid } from "./db";
 import { firestoreAddDoctorAccess, firestoreCreateAppointment, firestoreList, firestoreSyncDoctorPatientAccess, isFirebaseBackend } from "./firebase";
-import type { Acte, Compte, DossierMedical, Entreprise, Facture, Patient, RappelWhatsapp, RendezVous, Soin } from "@/types";
+import type { Acte, Compte, Depense, DossierMedical, Entreprise, Facture, Patient, RappelWhatsapp, RendezVous, Soin } from "@/types";
 
 export const comptes = collection<Compte>("comptes");
 export const patients = collection<Patient>("patients");
@@ -12,6 +12,20 @@ export const dossiers = collection<DossierMedical>("dossiers");
 export const soins = collection<Soin>("soins");
 export const actes = collection<Acte>("actes");
 export const entreprises = collection<Entreprise>("entreprises");
+export const depenses = collection<Depense>("depenses");
+
+export async function confirmerRendezVous(
+  rendezVousId: string,
+  source: "rdvs" | "rendezVous",
+  confirmePar: string,
+): Promise<void> {
+  const rendezVousDb = source === "rdvs" ? rdvs : rendezVous;
+  await rendezVousDb.update(rendezVousId, {
+    statut: "confirme",
+    confirmationClientLe: new Date().toISOString(),
+    confirmationClientPar: confirmePar,
+  });
+}
 
 export async function patientsDuDocteur(doctorId: string): Promise<Patient[]> {
   if (!isFirebaseBackend()) {

@@ -1,11 +1,14 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/auth/AuthContext";
 import { IconPlus } from "@/components/icons";
 import { RdvList } from "@/components/RdvList";
 import { Button } from "@/components/ui/Button";
 import { Card, CardTitle, PageHeader } from "@/components/ui/Card";
+import { Input } from "@/components/ui/Field";
 import { PageLoadError, PageSkeleton } from "@/components/ui/Skeleton";
 import { StatGrid } from "@/components/ui/Stat";
+import { depenses } from "@/data/services";
 import { useDonnees } from "@/data/useDonnees";
 import { addDays, isoDay } from "@/lib/dates";
 import { formatFcfa } from "@/lib/utils";
@@ -13,7 +16,13 @@ import { formatFcfa } from "@/lib/utils";
 export default function DashboardSecretaire() {
   const donnees = useDonnees();
   const nav = useNavigate();
-  const { readOnly } = useAuth();
+  const { readOnly, user } = useAuth();
+  const [dateDepense, setDateDepense] = useState(isoDay());
+  const [libelleDepense, setLibelleDepense] = useState("");
+  const [montantDepense, setMontantDepense] = useState("");
+  const [depenseEnCours, setDepenseEnCours] = useState(false);
+  const [erreurDepense, setErreurDepense] = useState("");
+  const [messageDepense, setMessageDepense] = useState("");
   if (donnees.status === "loading") return <PageSkeleton />;
   if (donnees.status === "error") return <PageLoadError error={donnees.error} />;
   const d = donnees.data;
@@ -26,6 +35,33 @@ export default function DashboardSecretaire() {
   const nonConfirmesDemain = d.rdvs.filter((r) => r.dateRdv === demain && r.statut === "planifie").length;
   const impayes = d.factures.filter((f) => f.statut !== "paye");
   const reste = impayes.reduce((s, f) => s + f.montantTotal - f.montantPaye, 0);
+
+  async function enregistrerDepense() {
+    const montant = Number(montantDepense);
+    if (!dateDepense) return setErreurDepense("Sélectionnez la date de la dépense.");
+    if (!libelleDepense.trim()) return setErreurDepense("Saisissez le libellé de la dépense.");
+    if (!Number.isSafeInteger(montant) || montant <= 0) return setErreurDepense("Saisissez un montant entier supérieur à 0.");
+    if (!user) return setErreurDepense("Votre session est expirée. Reconnectez-vous avant d’enregistrer la dépense.");
+    setDepenseEnCours(true);
+    setErreurDepense("");
+    setMessageDepense("");
+    try {
+      await depenses.create({
+        date: dateDepense,
+        libelle: libelleDepense.trim(),
+        montant,
+        createdAt: new Date().toISOString(),
+        createdBy: user.id,
+      });
+      setLibelleDepense("");
+      setMontantDepense("");
+      setMessageDepense("Dépense enregistrée. Elle apparaîtra dans le tableau financier.");
+    } catch (error) {
+      setErreurDepense(error instanceof Error ? error.message : "Impossible d’enregistrer cette dépense.");
+    } finally {
+      setDepenseEnCours(false);
+    }
+  }
 
   const alertes = [
     echoues > 0 && { t: `${echoues} rappel(s) WhatsApp en échec`, danger: true },
@@ -62,6 +98,20 @@ export default function DashboardSecretaire() {
           ) : <p className="px-5 py-10 text-center text-sm text-faint">Rien à signaler.</p>}
         </Card>
       </div>
+      {!readOnly && (
+        <Card className="mt-6 animate-rise p-5">
+          <CardTitle eyebrow="Caisse" title="Enregistrer une dépense" />
+          <p className="mb-4 text-sm text-mute">La dépense sera visible dans le tableau financier de l’administrateur.</p>
+          <div className="grid gap-3 md:grid-cols-[1fr_2fr_1fr_auto] md:items-end">
+            <Input label="Date" type="date" value={dateDepense} onChange={(event) => setDateDepense(event.target.value)} />
+            <Input label="Libellé" placeholder="Ex. Fournitures de bureau" value={libelleDepense} onChange={(event) => setLibelleDepense(event.target.value)} />
+            <Input label="Montant (FCFA)" type="number" min={1} step={1} value={montantDepense} onChange={(event) => setMontantDepense(event.target.value)} />
+            <Button onClick={() => void enregistrerDepense()} disabled={depenseEnCours}>{depenseEnCours ? "Enregistrement…" : "Enregistrer"}</Button>
+          </div>
+          {erreurDepense && <p role="alert" className="mt-3 text-sm text-danger">{erreurDepense}</p>}
+          {messageDepense && <p role="status" className="mt-3 text-sm text-emerald-800">{messageDepense}</p>}
+        </Card>
+      )}
     </>
   );
 }

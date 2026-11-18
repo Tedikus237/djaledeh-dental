@@ -1,4 +1,5 @@
 import { addDays, isoDay } from "@/lib/dates";
+import { categorieParLibelle } from "@/lib/categories";
 import { prixActe, libelleCode, repartition, statutDe } from "@/lib/tarifs";
 import { calculerAge } from "@/lib/utils";
 import type { Acte, Facture, Lettre, LigneSoin, NatureConsultation, Paiement, RappelWhatsapp, RendezVous, Soin, StatutRdv } from "@/types";
@@ -47,6 +48,7 @@ export async function initialiserCatalogueActes() {
       prixNonAssure: PRIX_NON_ASSURE_BASE[libelle] ?? 0,
       dureeMinutes,
       actif: true,
+      categorie: categorieParLibelle(libelle),
     }))
     .filter((a) => !libellesExistants.has(a.libelle.trim().toLocaleLowerCase()));
 
@@ -61,6 +63,7 @@ export async function initialiserCatalogueActes() {
         prixNonAssure: a.prixNonAssure,
         dureeMinutes: a.dureeMinutes,
         actif: a.actif,
+        categorie: a.categorie,
       })));
     }
   }

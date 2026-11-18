@@ -81,6 +81,21 @@ service cloud.firestore {
       allow read, write: if clinicManager();
     }
 
+    match /depenses/{depenseId} {
+      allow get, list: if admin();
+      allow create: if clinicManager()
+        && request.resource.data.keys().hasAll(['date', 'libelle', 'montant', 'createdAt', 'createdBy'])
+        && request.resource.data.date is string
+        && request.resource.data.date.size() > 0
+        && request.resource.data.libelle is string
+        && request.resource.data.libelle.size() > 0
+        && request.resource.data.montant is number
+        && request.resource.data.montant > 0
+        && request.resource.data.createdAt is string
+        && request.resource.data.createdBy == request.auth.uid;
+      allow update, delete: if admin();
+    }
+
     match /rappels/{reminderId} {
       allow read, write: if clinicManager();
     }

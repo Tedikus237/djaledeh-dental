@@ -1,16 +1,22 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { useAuth } from "@/auth/AuthContext";
 import { useAcces } from "@/auth/useAcces";
 import { PageHeader, Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { patients, rdvs as anciennesVisites, rendezVous } from "@/data/services";
+import { confirmerRendezVous, patients, rdvs as anciennesVisites, rendezVous } from "@/data/services";
 import type { RendezVous, StatutRdv } from "@/types";
 
+type RendezVousPlanning = RendezVous & { patientNom?: string; source: "rdvs" | "rendezVous" };
+
 export default function Calendrier() {
-  const { docteurId } = useAcces();
-  const [rdvs, setRdvs] = useState<(RendezVous & { patientNom?: string })[]>([]);
+  const { docteurId, peutEditer } = useAcces();
+  const { user } = useAuth();
+  const [rdvs, setRdvs] = useState<RendezVousPlanning[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [actionError, setActionError] = useState("");
+  const [confirmationEnCours, setConfirmationEnCours] = useState("");
 
   useEffect(() => {
     const chargerDonnees = async () => {
@@ -26,7 +32,10 @@ export default function Calendrier() {
           rendezVous.list(filtreDocteur),
           patients.list(filtrePatients),
         ]);
-        const listeRdvs = [...anciens, ...nouveaux];
+        const listeRdvs = [
+          ...anciens.map((rdv) => ({ ...rdv, source: "rdvs" as const })),
+          ...nouveaux.map((rdv) => ({ ...rdv, source: "rendezVous" as const })),
+        ];
 
         const rdvsAvecNoms = listeRdvs.map(rdv => {
           const patient = listePatients.find(p => p.id === rdv.patientId);
@@ -47,6 +56,23 @@ export default function Calendrier() {
 
     void chargerDonnees();
   }, [docteurId]);
+
+  async function confirmerClient(rdv: RendezVousPlanning) {
+    if (!user || !peutEditer) return;
+    setConfirmationEnCours(rdv.id);
+    setActionError("");
+    try {
+      const confirmationClientLe = new Date().toISOString();
+      await confirmerRendezVous(rdv.id, rdv.source, user.id);
+      setRdvs((rows) => rows.map((row) => row.id === rdv.id
+        ? { ...row, statut: "confirme", confirmationClientLe, confirmationClientPar: user.id }
+        : row));
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "Impossible d’enregistrer la confirmation du client.");
+    } finally {
+      setConfirmationEnCours("");
+    }
+  }
 
   const getStatutBadge = (statut: StatutRdv) => {
     switch(statut) {
@@ -93,6 +119,7 @@ export default function Calendrier() {
                   <th className="px-6 py-3 font-medium">Patient</th>
                   <th className="px-6 py-3 font-medium">Motif</th>
                   <th className="px-6 py-3 font-medium">Statut</th>
+                  {peutEditer && <th className="px-6 py-3 font-medium">Confirmation</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -105,12 +132,24 @@ export default function Calendrier() {
                     <td className="px-6 py-4 font-medium text-gray-900">{rdv.patientNom}</td>
                     <td className="px-6 py-4 text-gray-500">{rdv.motif}</td>
                     <td className="px-6 py-4">{getStatutBadge(rdv.statut)}</td>
+                    {peutEditer && (
+                      <td className="px-6 py-4">
+                        {rdv.statut === "planifie" ? (
+                          <Button size="sm" disabled={confirmationEnCours === rdv.id} onClick={() => void confirmerClient(rdv)}>
+                            {confirmationEnCours === rdv.id ? "Enregistrement…" : "Client a confirmé"}
+                          </Button>
+                        ) : rdv.confirmationClientLe ? (
+                          <span title={`Enregistré le ${new Date(rdv.confirmationClientLe).toLocaleString("fr-FR")}`} className="text-xs text-mute">Confirmation enregistrée</span>
+                        ) : <span className="text-xs text-mute">—</span>}
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         )}
+        {actionError && <p role="alert" className="border-t border-line px-5 py-3 text-sm text-danger">{actionError}</p>}
       </Card>
     </>
   );
